@@ -1,0 +1,13 @@
+{
+  "name": "halden-clinic",
+  "private": true,
+  "scripts": {
+    "setup": "npm --prefix backend run setup",
+    "start": "concurrently -n api,app \"npm --prefix backend run dev\" \"npm --prefix mobile run start\"",
+    "web": "concurrently -n api,web \"npm --prefix backend run dev\" \"npm --prefix mobile run web\"",
+    "api": "npm --prefix backend run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

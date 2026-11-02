@@ -1,0 +1,11 @@
+node_modules/
+backend/node_modules/
+backend/.env
+backend/.pgdata/
+backend/uploads/*
+!backend/uploads/.gitkeep
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/.env
+*.log

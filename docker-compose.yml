@@ -1,0 +1,22 @@
+name: halden
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: clinic
+      POSTGRES_PASSWORD: clinic
+      POSTGRES_DB: clinic
+    ports:
+      - "5432:5432"
+    volumes:
+      - halden_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinic -d clinic"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  halden_pg:
