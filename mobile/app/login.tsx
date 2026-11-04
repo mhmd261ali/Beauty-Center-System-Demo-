@@ -10,7 +10,7 @@ import { WIDE } from '../lib/format';
 import type { Role } from '../lib/types';
 
 const DEMOS: { role: Role; name: string; email: string; password: string; note: string }[] = [
-  { role: 'admin', name: 'Amina Farid', email: 'admin@halden.clinic', password: 'admin123', note: 'Full clinic, staff, and deleting records' },
+  { role: 'admin', name: 'Amina Farid', email: 'admin@halden.clinic', password: 'admin123', note: 'Full desk, staff, and deleting records' },
   { role: 'sub-admin', name: 'Noah Keller', email: 'subadmin@halden.clinic', password: 'subadmin123', note: 'Book, edit, and add documents' },
   { role: 'user', name: 'Sara Idris', email: 'user@halden.clinic', password: 'user123', note: 'See the day and book a visit' },
 ];
@@ -46,10 +46,10 @@ export default function LoginScreen() {
         Sign in
       </Text>
       <Text style={font.display} className="mt-2 text-4xl text-ink">
-        Sign in
+        Open the desk
       </Text>
       <Text style={font.sans} className="mb-6 mt-2 text-base leading-6 text-mute">
-        The same clinic on a computer or a phone.
+        The same book on Windows, iPhone, and Android.
       </Text>
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Text style={font.medium} className="mb-1.5 text-xs uppercase tracking-widest text-moss">
@@ -88,7 +88,7 @@ export default function LoginScreen() {
         style={{ opacity: busy ? 0.6 : 1 }}
       >
         <Text style={font.semibold} className="text-base text-card">
-          {busy ? 'Checking…' : 'Sign in'}
+          {busy ? 'Checking…' : 'Enter the desk'}
         </Text>
       </Pressable>
       <Text style={font.sans} className="mb-3 mt-8 text-xs uppercase tracking-widest text-mute">
@@ -137,12 +137,12 @@ export default function LoginScreen() {
             Halden
           </Text>
           <Text style={font.sans} className="mt-3 max-w-sm text-base leading-6 text-sand">
-            Visits and records for doctors and therapists.
+            Today’s book, the month, and the sessions for each patient.
           </Text>
         </View>
         {wide ? (
           <View>
-            <RoleLine role="Admin" text="Runs the clinic, including staff accounts." />
+            <RoleLine role="Admin" text="Runs the desk, including staff accounts." />
             <RoleLine role="Sub-admin" text="Books, edits, and files documents." />
             <RoleLine role="User" text="Reads the day and books a visit." />
           </View>

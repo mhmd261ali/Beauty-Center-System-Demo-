@@ -218,8 +218,6 @@ export default function DashboardScreen() {
   const [report, setReport] = useState<DashboardReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const showIncome = user ? canSeeIncome(user.role) : false;
-  const showClinicians = user ? user.role !== 'user' : false;
-  const compactMix = user?.role === 'user';
 
   const load = useCallback(async () => {
     setError(null);
@@ -277,28 +275,26 @@ export default function DashboardScreen() {
       icon: 'people' as const,
       iconColor: '#e07a6a',
     },
+    showIncome
+      ? {
+          label: 'Income',
+          value: dollars(report?.totalIncome ?? 0),
+          hint: 'Recorded payments',
+          hintColor: '#c4921a',
+          tint: '#fbf6e0',
+          icon: 'cash' as const,
+          iconColor: '#c4921a',
+        }
+      : {
+          label: 'Therapists',
+          value: String(therapists.length),
+          hint: 'On the desk',
+          hintColor: '#0f5c5e',
+          tint: '#e7f3f4',
+          icon: 'users' as const,
+          iconColor: '#0f5c5e',
+        },
   ];
-  if (showIncome) {
-    stats.push({
-      label: 'Income',
-      value: dollars(report?.totalIncome ?? 0),
-      hint: 'Recorded payments',
-      hintColor: '#c4921a',
-      tint: '#fbf6e0',
-      icon: 'cash' as const,
-      iconColor: '#c4921a',
-    });
-  } else if (showClinicians) {
-    stats.push({
-      label: 'Clinicians',
-      value: String(therapists.length),
-      hint: 'On the team',
-      hintColor: '#0f5c5e',
-      tint: '#e7f3f4',
-      icon: 'users' as const,
-      iconColor: '#0f5c5e',
-    });
-  }
 
   return (
     <Screen>
@@ -340,12 +336,11 @@ export default function DashboardScreen() {
         ))}
       </View>
 
-      <View className={wide && !compactMix ? 'mb-5 flex-row items-start' : 'mb-5'}>
-        {compactMix ? null : (
+      <View className={wide ? 'mb-5 flex-row items-start' : 'mb-5'}>
         <View className={wide ? 'mr-4 flex-1' : 'mb-4'} style={PANEL}>
           <View className="px-5 pb-2 pt-5">
             <Text style={font.semibold} className="text-lg text-ink">
-              Specialties
+              Therapies
             </Text>
           </View>
           {wide ? (
@@ -420,177 +415,71 @@ export default function DashboardScreen() {
             );
           })}
         </View>
-        )}
 
-        <View className={wide && !compactMix ? 'w-80' : ''} style={PANEL}>
-          {compactMix && wide ? (
-            <View className="flex-row items-center">
-              <View className="border-r border-line px-5 py-5" style={{ width: 200 }}>
-                <Text style={font.semibold} className="text-lg text-ink">
-                  Sessions
-                </Text>
-                <Text style={[font.display, { fontVariant: ['tabular-nums'] }]} className="mt-2 text-4xl text-ink">
-                  {totalSessions}
-                </Text>
-                <Text style={font.sans} className="text-sm text-mute">
-                  all sessions
-                </Text>
-              </View>
-              <View className="px-5 py-5" style={{ width: 240 }}>
-                <Text style={font.semibold} className="text-lg text-ink">
-                  Session mix
-                </Text>
-                <Text style={font.display} className="mt-2 text-4xl text-ink">
-                  {mix}%
-                </Text>
-                <Text style={font.sans} className="text-sm text-mute">
-                  completed of booked sessions
-                </Text>
-              </View>
-              <View className="flex-1 flex-row py-5 pr-2">
-                <View className="flex-1 px-1">
-                  <MixChip label="Completed" value={completed} color="#22a06b" icon="check" />
+        <View className={wide ? 'w-80' : ''} style={PANEL}>
+          <View className="p-5">
+            <Text style={font.semibold} className="text-lg text-ink">
+              Session mix
+            </Text>
+            <Text style={font.display} className="mt-2 text-4xl text-ink">
+              {mix}%
+            </Text>
+            <Text style={font.sans} className="mb-4 text-sm text-mute">
+              completed of booked sessions
+            </Text>
+            <View className="mb-4 flex-row">
+              {assigned.map((therapy, index) => (
+                <View key={therapy.name} className={index === assigned.length - 1 ? 'flex-1' : 'mr-1.5 flex-1'}>
+                  <View className="mb-1 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: '#eef4f4' }}>
+                    <View
+                      className="h-1.5 rounded-full"
+                      style={{ width: `${percent(therapy.sessions, totalSessions)}%`, backgroundColor: therapyTone(therapy.name).mark }}
+                    />
+                  </View>
+                  <Text style={font.medium} className="text-center text-xs text-mute">
+                    {percent(therapy.sessions, totalSessions)}%
+                  </Text>
                 </View>
-                <View className="flex-1 px-1">
-                  <MixChip label="In clinic" value={arrived} color="#2eb5c0" icon="progress" />
-                </View>
-                <View className="flex-1 px-1">
-                  <MixChip label="Upcoming" value={scheduled} color="#e07a45" icon="clock" />
-                </View>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/reserve')}
-                className="m-5 overflow-hidden rounded-2xl px-5 py-4"
-                style={{ backgroundColor: '#0f5c5e', width: 220 }}
-              >
-                <Text style={font.display} className="text-2xl text-card">
-                  Book the next visit
-                </Text>
-                <Text style={font.sans} className="mt-1 text-sm text-sand">
-                  Open the schedule
-                </Text>
-              </Pressable>
+              ))}
             </View>
-          ) : compactMix ? (
-            <>
-              <View className="flex-row">
-                <View className="flex-1 border-r border-line px-5 py-5">
-                  <Text style={font.semibold} className="text-lg text-ink">
-                    Sessions
-                  </Text>
-                  <Text style={[font.display, { fontVariant: ['tabular-nums'] }]} className="mt-2 text-4xl text-ink">
-                    {totalSessions}
-                  </Text>
-                  <Text style={font.sans} className="text-sm text-mute">
-                    all sessions
-                  </Text>
-                </View>
-                <View className="flex-1 px-5 py-5">
-                  <Text style={font.semibold} className="text-lg text-ink">
-                    Session mix
-                  </Text>
-                  <Text style={font.display} className="mt-2 text-4xl text-ink">
-                    {mix}%
-                  </Text>
-                  <Text style={font.sans} className="text-sm text-mute">
-                    completed of booked sessions
-                  </Text>
-                </View>
+            <View className="flex-row" style={{ marginHorizontal: -4 }}>
+              <View className="flex-1" style={{ paddingHorizontal: 4 }}>
+                <MixChip label="Completed" value={completed} color="#22a06b" icon="check" />
               </View>
-              <View className="flex-row px-5 pb-5" style={{ marginHorizontal: -4 }}>
-                <View className="flex-1" style={{ paddingHorizontal: 4 }}>
-                  <MixChip label="Completed" value={completed} color="#22a06b" icon="check" />
-                </View>
-                <View className="flex-1" style={{ paddingHorizontal: 4 }}>
-                  <MixChip label="In clinic" value={arrived} color="#2eb5c0" icon="progress" />
-                </View>
-                <View className="flex-1" style={{ paddingHorizontal: 4 }}>
-                  <MixChip label="Upcoming" value={scheduled} color="#e07a45" icon="clock" />
-                </View>
+              <View className="flex-1" style={{ paddingHorizontal: 4 }}>
+                <MixChip label="In clinic" value={arrived} color="#2eb5c0" icon="progress" />
               </View>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/reserve')}
-                className="m-5 mt-0 overflow-hidden rounded-2xl px-5 py-4"
-                style={{ backgroundColor: '#0f5c5e' }}
-              >
-                <Text style={font.display} className="text-2xl text-card">
-                  Book the next visit
-                </Text>
-                <Text style={font.sans} className="mt-1 text-sm text-sand">
-                  Open the schedule
-                </Text>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <View className="p-5">
-                <Text style={font.semibold} className="text-lg text-ink">
-                  Session mix
-                </Text>
-                <Text style={font.display} className="mt-2 text-4xl text-ink">
-                  {mix}%
-                </Text>
-                <Text style={font.sans} className="mb-4 text-sm text-mute">
-                  completed of booked sessions
-                </Text>
-                <View className="mb-4 flex-row">
-                  {assigned.map((therapy, index) => (
-                    <View key={therapy.name} className={index === assigned.length - 1 ? 'flex-1' : 'mr-1.5 flex-1'}>
-                      <View className="mb-1 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: '#eef4f4' }}>
-                        <View
-                          className="h-1.5 rounded-full"
-                          style={{ width: `${percent(therapy.sessions, totalSessions)}%`, backgroundColor: therapyTone(therapy.name).mark }}
-                        />
-                      </View>
-                      <Text style={font.medium} className="text-center text-xs text-mute">
-                        {percent(therapy.sessions, totalSessions)}%
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-                <View className="flex-row" style={{ marginHorizontal: -4 }}>
-                  <View className="flex-1" style={{ paddingHorizontal: 4 }}>
-                    <MixChip label="Completed" value={completed} color="#22a06b" icon="check" />
-                  </View>
-                  <View className="flex-1" style={{ paddingHorizontal: 4 }}>
-                    <MixChip label="In clinic" value={arrived} color="#2eb5c0" icon="progress" />
-                  </View>
-                  <View className="flex-1" style={{ paddingHorizontal: 4 }}>
-                    <MixChip label="Upcoming" value={scheduled} color="#e07a45" icon="clock" />
-                  </View>
-                </View>
+              <View className="flex-1" style={{ paddingHorizontal: 4 }}>
+                <MixChip label="Upcoming" value={scheduled} color="#e07a45" icon="clock" />
               </View>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push('/reserve')}
-                className="m-5 mt-0 overflow-hidden rounded-2xl px-5 py-4"
-                style={{ backgroundColor: '#0f5c5e' }}
-              >
-                <Text style={font.display} className="text-2xl text-card">
-                  Book the next visit
-                </Text>
-                <Text style={font.sans} className="mt-1 text-sm text-sand">
-                  Open the schedule
-                </Text>
-              </Pressable>
-            </>
-          )}
+            </View>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/reserve')}
+            className="m-5 mt-0 overflow-hidden rounded-2xl px-5 py-4"
+            style={{ backgroundColor: '#0f5c5e' }}
+          >
+            <Text style={font.display} className="text-2xl text-card">
+              Book the next visit
+            </Text>
+            <Text style={font.sans} className="mt-1 text-sm text-sand">
+              Open the booking desk
+            </Text>
+          </Pressable>
         </View>
       </View>
 
       <View className={wide ? 'flex-row items-start' : ''}>
-        {showClinicians ? (
         <View className={wide ? 'mr-4 flex-1' : 'mb-4'} style={PANEL}>
           <View className="px-5 pb-2 pt-5">
             <Text style={font.semibold} className="text-lg text-ink">
-              Clinicians
+              Therapists
             </Text>
           </View>
           {therapists.length === 0 ? (
             <Text style={font.sans} className="px-5 pb-5 text-sm text-mute">
-              No clinicians yet.
+              No therapists on the desk yet.
             </Text>
           ) : (
             therapists.map((person) => {
@@ -621,7 +510,6 @@ export default function DashboardScreen() {
             })
           )}
         </View>
-        ) : null}
 
         <View className={wide ? 'flex-1' : ''} style={PANEL}>
           <View className="flex-row items-center justify-between px-5 pb-2 pt-5">

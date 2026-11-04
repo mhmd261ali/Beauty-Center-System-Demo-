@@ -1,7 +1,6 @@
 const express = require('express');
 
 const { pool } = require('../db');
-const { THERAPIES } = require('../care');
 const { requireAuth, requireRole } = require('../auth');
 const { asyncHandler, fail } = require('../http');
 
@@ -51,7 +50,7 @@ router.get(
         AND r.amount_paid IS NOT NULL
       ORDER BY r.scheduled_date DESC, r.start_time, r.id
       `,
-      [from, to, THERAPIES],
+      [from, to],
     );
 
     const categories = TYPES.map((type) => {

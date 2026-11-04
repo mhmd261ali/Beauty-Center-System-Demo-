@@ -17,7 +17,7 @@ router.post(
     }
 
     const { rows } = await pool.query(
-      'SELECT id, name, email, role, therapy_type AS "therapyType", password_hash FROM users WHERE email = $1',
+      'SELECT id, name, email, role, password_hash FROM users WHERE email = $1',
       [email],
     );
     const user = rows[0];
@@ -25,7 +25,7 @@ router.post(
       throw fail(401, 'Email or password is not right.');
     }
 
-    const safe = { id: user.id, name: user.name, email: user.email, role: user.role, therapyType: user.therapyType };
+    const safe = { id: user.id, name: user.name, email: user.email, role: user.role };
     res.json({ token: signToken(safe), user: safe });
   }),
 );
@@ -35,7 +35,7 @@ router.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      'SELECT id, name, email, role, therapy_type AS "therapyType" FROM users WHERE id = $1',
+      'SELECT id, name, email, role FROM users WHERE id = $1',
       [req.user.id],
     );
     if (!rows[0]) {

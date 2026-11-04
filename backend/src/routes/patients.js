@@ -4,7 +4,6 @@ const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
 const { asyncHandler, fail, isDate, text, localToday, wholeNumber } = require('../http');
 const { THERAPY_SET, doctorFor } = require('../care');
-const { domainOf, assertDomain } = require('../scope');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -31,14 +30,14 @@ const patientColumns = `
 `;
 
 function allottedSessions(patientType, value) {
-  if (patientType !== 'Company' && patientType !== 'Insurance') return null;
+  if (patientType !== 'Company' && patientType !== 'Islamic') return null;
   return wholeNumber(value, 'Number of sessions');
 }
 
 function careInput(body) {
-  const therapyType = text(body.therapyType, 80, 'Specialty');
+  const therapyType = text(body.therapyType, 80, 'Therapy');
   if (therapyType && !THERAPY_SET.has(therapyType)) {
-    throw fail(400, 'Choose a specialty.');
+    throw fail(400, 'Choose a therapy type.');
   }
   return { therapyType, doctorId: body.doctorId };
 }
@@ -66,8 +65,8 @@ function patientInput(body, { requireName }) {
     throw fail(400, 'Choose male or female.');
   }
   const patientType = text(body.patientType, 40, 'Patient type') || 'Private';
-  if (!['Private', 'Company', 'Insurance'].includes(patientType)) {
-    throw fail(400, 'Choose private, insurance, or company.');
+  if (!['Private', 'Company', 'Islamic'].includes(patientType)) {
+    throw fail(400, 'Choose private, company, or islamic.');
   }
   return {
     fullName,
@@ -88,7 +87,6 @@ router.get(
     const term = String(req.query.q || '').trim();
     const pattern = term ? `%${term}%` : null;
     const today = isDate(req.query.today) ? req.query.today : null;
-    const domain = await domainOf(req);
     const { rows } = await pool.query(
       `
       SELECT
@@ -116,11 +114,10 @@ router.get(
         LIMIT 1
       ) nv ON true
       WHERE ($1::text IS NULL OR p.full_name ILIKE $1 OR COALESCE(p.phone, '') ILIKE $1)
-        AND ($3::text IS NULL OR p.therapy_type = $3)
       ORDER BY p.full_name
       LIMIT 200
       `,
-      [pattern, today, domain],
+      [pattern, today],
     );
     res.json({ patients: rows });
   }),
@@ -134,7 +131,6 @@ router.get(
       [req.params.id],
     );
     if (!rows[0]) throw fail(404, 'Patient not found.');
-    assertDomain(await domainOf(req), rows[0].therapyType, 'That patient is outside your specialty.');
     res.json({ patient: rows[0] });
   }),
 );
@@ -143,8 +139,6 @@ router.post(
   '/',
   asyncHandler(async (req, res) => {
     const input = patientInput(req.body, { requireName: true });
-    const domain = await domainOf(req);
-    if (domain != null) input.therapyType = domain;
     const doctor = await doctorFor(input.doctorId, input.therapyType);
     const { rows } = await pool.query(
       `
@@ -179,14 +173,11 @@ router.patch(
   '/:id',
   asyncHandler(async (req, res) => {
     const existing = await pool.query(
-      'SELECT id, patient_type AS "patientType", sessions_allotted AS "sessionsAllotted", therapy_type AS "therapyType" FROM patients WHERE id = $1',
+      'SELECT id, patient_type AS "patientType", sessions_allotted AS "sessionsAllotted" FROM patients WHERE id = $1',
       [req.params.id],
     );
     if (!existing.rows[0]) throw fail(404, 'Patient not found.');
-    const domain = await domainOf(req);
-    assertDomain(domain, existing.rows[0].therapyType, 'That patient is outside your specialty.');
     const care = careInput(req.body);
-    if (domain != null) care.therapyType = domain;
     const doctor = await doctorFor(care.doctorId, care.therapyType);
     const desk = req.user.role === 'admin' || req.user.role === 'sub-admin';
     if (!desk) {

@@ -5,7 +5,6 @@ const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
 const { asyncHandler, fail, EMAIL, ROLES, text } = require('../http');
 const { THERAPY_SET } = require('../care');
-const { domainOf } = require('../scope');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -20,40 +19,37 @@ function accountInput(body, passwordRequired) {
   const password = String(body.password || '');
   const role = String(body.role || '');
   const phone = text(body.phone, 40, 'Phone');
-  const therapyType = text(body.therapyType, 80, 'Specialty');
+  const therapyType = text(body.therapyType, 80, 'Therapy');
   if (!name) throw fail(400, 'Enter a name.');
   if (!EMAIL.test(email)) throw fail(400, 'Enter a valid email.');
   if (passwordRequired || password) {
     if (password.length < 6) throw fail(400, 'Use a password of at least 6 characters.');
   }
-  if (passwordRequired && (!phone || phone.length < 3)) throw fail(400, 'Enter a phone number.');
-  if (!passwordRequired && phone && phone.length < 3) throw fail(400, 'Enter a phone number.');
+  if (!phone || phone.length < 3) throw fail(400, 'Enter a phone number.');
   if (!ROLES.includes(role)) throw fail(400, 'Choose admin, sub-admin, or user.');
-  if (therapyType && !THERAPY_SET.has(therapyType)) throw fail(400, 'Choose a specialty.');
+  if (therapyType && !THERAPY_SET.has(therapyType)) throw fail(400, 'Choose a therapy type.');
   return { name, email, password, role, phone, therapyType };
 }
 
 router.get(
   '/',
-  requireRole('admin', 'sub-admin', 'user'),
-  asyncHandler(async (req, res) => {
-    const domain = await domainOf(req);
+  requireRole('admin', 'sub-admin'),
+  asyncHandler(async (_req, res) => {
     const { rows } = await pool.query(
       `
       SELECT ${userColumns}
       FROM users
-      WHERE ($1::text IS NULL OR therapy_type = $1)
       ORDER BY name
       `,
-      [domain],
     );
     res.json({ users: rows });
   }),
 );
 
+router.use(requireRole('admin'));
+
 router.post(
   '/',
-  requireRole('admin'),
   asyncHandler(async (req, res) => {
     const account = accountInput(req.body, true);
     const { rows } = await pool.query(
@@ -71,18 +67,7 @@ router.post(
 router.patch(
   '/:id',
   asyncHandler(async (req, res) => {
-    const own = Number(req.params.id) === req.user.id;
-    if (req.user.role !== 'admin' && !own) throw fail(403, 'Your role cannot do that.');
-    const existing = await pool.query(
-      'SELECT role, therapy_type AS "therapyType" FROM users WHERE id = $1',
-      [req.params.id],
-    );
-    if (!existing.rows[0]) throw fail(404, 'Account not found.');
     const account = accountInput(req.body, false);
-    if (req.user.role !== 'admin') {
-      account.role = existing.rows[0].role;
-      account.therapyType = existing.rows[0].therapyType;
-    }
     const values = [account.name, account.email, account.phone, account.role, account.therapyType];
     let passwordSql = '';
     if (account.password) {
@@ -106,7 +91,6 @@ router.patch(
 
 router.delete(
   '/:id',
-  requireRole('admin'),
   asyncHandler(async (req, res) => {
     if (Number(req.params.id) === req.user.id) {
       throw fail(400, 'You cannot remove your own account.');

@@ -3,7 +3,6 @@ const express = require('express');
 const { pool } = require('../db');
 const { requireAuth } = require('../auth');
 const { THERAPIES } = require('../care');
-const { domainOf } = require('../scope');
 const { asyncHandler, fail } = require('../http');
 
 const router = express.Router();
@@ -32,8 +31,7 @@ router.get(
     const month = String(req.query.month || currentMonth()).trim();
     if (!MONTH.test(month)) throw fail(400, 'Choose a month.');
     const { from, to } = monthBounds(month);
-    const domain = await domainOf(req);
-    const range = [from, to, domain];
+    const range = [from, to];
 
     const [therapyResult, incomeResult, therapistResult, patientResult, cancelledResult] = await Promise.all([
       pool.query(
@@ -48,7 +46,6 @@ router.get(
         WHERE r.status <> 'cancelled'
           AND r.scheduled_date >= $1::date
           AND r.scheduled_date <= $2::date
-          AND ($3::text IS NULL OR p.therapy_type = $3)
         GROUP BY 1
         `,
         range,
@@ -63,7 +60,6 @@ router.get(
           AND r.amount_paid IS NOT NULL
           AND r.scheduled_date >= $1::date
           AND r.scheduled_date <= $2::date
-          AND ($3::text IS NULL OR p.therapy_type = $3)
         GROUP BY 1
         `,
         range,
@@ -80,7 +76,6 @@ router.get(
           AND r.scheduled_date >= $1::date
           AND r.scheduled_date <= $2::date
         WHERE u.therapy_type IS NOT NULL
-          AND ($3::text IS NULL OR u.therapy_type = $3)
         GROUP BY u.id
         ORDER BY sessions DESC, u.name
         `,
@@ -97,7 +92,6 @@ router.get(
         LEFT JOIN reservations r ON r.patient_id = p.id
           AND r.scheduled_date >= $1::date
           AND r.scheduled_date <= $2::date
-        WHERE ($3::text IS NULL OR p.therapy_type = $3)
         GROUP BY p.id
         ORDER BY sessions DESC, p.full_name
         `,
@@ -110,11 +104,9 @@ router.get(
           COUNT(*) FILTER (WHERE status = 'arrived')::int AS arrived,
           COUNT(*) FILTER (WHERE status = 'scheduled')::int AS scheduled,
           COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled
-        FROM reservations r
-        JOIN patients p ON p.id = r.patient_id
-        WHERE r.scheduled_date >= $1::date
-          AND r.scheduled_date <= $2::date
-          AND ($3::text IS NULL OR p.therapy_type = $3)
+        FROM reservations
+        WHERE scheduled_date >= $1::date
+          AND scheduled_date <= $2::date
         `,
         range,
       ),
@@ -124,15 +116,14 @@ router.get(
     const completedMap = new Map(therapyResult.rows.map((row) => [row.therapy, Number(row.completed) || 0]));
     const incomeMap = new Map(incomeResult.rows.map((row) => [row.therapy, Number(row.income) || 0]));
 
-    const names = domain == null ? THERAPIES : THERAPIES.filter((name) => name === domain);
-    const therapies = names.map((name) => ({
+    const therapies = THERAPIES.map((name) => ({
       name,
       sessions: sessionMap.get(name) ?? 0,
       completed: completedMap.get(name) ?? 0,
       income: incomeMap.get(name) ?? 0,
     }));
 
-    const known = new Set(names);
+    const known = new Set(THERAPIES);
     const leftoverSessions = [...sessionMap.entries()].reduce((sum, [name, count]) => (known.has(name) ? sum : sum + count), 0);
     const leftoverCompleted = [...completedMap.entries()].reduce((sum, [name, count]) => (known.has(name) ? sum : sum + count), 0);
     const leftoverIncome = [...incomeMap.entries()].reduce((sum, [name, amount]) => (known.has(name) ? sum : sum + amount), 0);

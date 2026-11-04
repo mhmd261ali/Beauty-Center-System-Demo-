@@ -19,7 +19,7 @@ import {
 import { canSeeIncome } from '../../lib/permissions';
 import type { IncomeMonth } from '../../lib/types';
 
-const CARD_ORDER = ['Insurance', 'Company', 'Private'] as const;
+const CARD_ORDER = ['Company', 'Private', 'Islamic'] as const;
 
 function dollars(value: number | null | undefined) {
   return `$${formatMoney(value)}`;

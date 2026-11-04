@@ -5,15 +5,11 @@ import { useRouter } from 'expo-router';
 import { Screen } from '../../../components/Screen';
 import { Banner, Button, Chip, DateField, Field, PageTitle, font } from '../../../components/ui';
 import { api } from '../../../lib/api';
-import { useAuth } from '../../../lib/auth';
-import { GENDERS, PAYER_TYPES, hasSessionQuota, todayISO } from '../../../lib/format';
-import { specialtiesFor } from '../../../lib/permissions';
+import { GENDERS, PATIENT_TYPES, PAYER_TYPES, hasSessionQuota, todayISO } from '../../../lib/format';
 import type { Doctor } from '../../../lib/types';
 
 export default function NewPatientScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const specialties = specialtiesFor(user);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [dob, setDob] = useState('');
@@ -27,11 +23,9 @@ export default function NewPatientScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const lockedSpecialty = specialties.length === 1 ? specialties[0] : null;
   useEffect(() => {
-    if (lockedSpecialty) setTherapy(lockedSpecialty);
-    api.doctors().then((data) => setDoctors(data.doctors)).catch(() => setError('Could not load the clinicians.'));
-  }, [lockedSpecialty]);
+    api.doctors().then((data) => setDoctors(data.doctors)).catch(() => setError('Could not load the doctors.'));
+  }, []);
 
   function chooseTherapy(item: string) {
     setTherapy(item);
@@ -52,7 +46,7 @@ export default function NewPatientScreen() {
       return;
     }
     if (!therapy || !doctorId) {
-      setError('Choose a specialty and one of its clinicians.');
+      setError('Choose a therapy and one of its doctors.');
       return;
     }
     const covered = hasSessionQuota(patientType);
@@ -89,7 +83,7 @@ export default function NewPatientScreen() {
           Back to patients
         </Text>
       </Pressable>
-      <PageTitle kicker="Patients" title="Add a patient" detail="Name, phone, birthday, coverage, specialty, one clinician, and the case." />
+      <PageTitle kicker="Patients" title="Add a patient" detail="Name, phone, birthday, gender, patient type, therapy, one doctor, and the case." />
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Field label="Name" value={name} onChangeText={setName} placeholder="Patient name" autoCapitalize="words" />
       <Field label="Phone number" value={phone} onChangeText={setPhone} placeholder="555-0100" keyboardType="phone-pad" />
@@ -128,15 +122,15 @@ export default function NewPatientScreen() {
         />
       ) : null}
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Specialty
+        Therapy type
       </Text>
       <View className="mb-4 flex-row flex-wrap">
-        {specialties.map((item) => (
+        {PATIENT_TYPES.map((item) => (
           <Chip key={item} label={item} active={therapy === item} onPress={() => chooseTherapy(item)} />
         ))}
       </View>
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Clinician following the case
+        Doctor following the case
       </Text>
       <View className="mb-4 flex-row flex-wrap">
         {doctors

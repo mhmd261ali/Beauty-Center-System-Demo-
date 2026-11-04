@@ -8,17 +8,15 @@ import { Screen } from '../../components/Screen';
 import { Banner, Button, Chip, Field, PageTitle, TherapyPill, confirmAction, font, therapySurface } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { WIDE } from '../../lib/format';
-import { canDelete, specialtiesFor } from '../../lib/permissions';
+import { PATIENT_TYPES, WIDE } from '../../lib/format';
+import { canDelete } from '../../lib/permissions';
 import type { Instrument, PickedFile } from '../../lib/types';
 
 export default function InstrumentsScreen() {
   const { user } = useAuth();
-  const specialties = specialtiesFor(user);
-  const limited = user?.role === 'user';
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
-  const [therapy, setTherapy] = useState<string | null>(limited && specialties.length === 1 ? specialties[0] : null);
+  const [therapy, setTherapy] = useState<string | null>(null);
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
@@ -36,7 +34,7 @@ export default function InstrumentsScreen() {
       setInstruments(data.instruments);
       setError(null);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not load equipment.');
+      setError(reason instanceof Error ? reason.message : 'Could not load instruments.');
     }
   }, []);
 
@@ -52,12 +50,12 @@ export default function InstrumentsScreen() {
   );
 
   const groups = useMemo(() => {
-    const types = therapy ? [therapy] : specialties;
+    const types = therapy ? [therapy] : PATIENT_TYPES;
     return types.map((type) => ({
       type,
       items: visible.filter((item) => item.therapyType === type),
     }));
-  }, [therapy, visible, specialties]);
+  }, [therapy, visible]);
 
   function beginAdd() {
     setAdding(true);
@@ -96,19 +94,19 @@ export default function InstrumentsScreen() {
 
   async function submit() {
     if (!formTherapy) {
-      setError('Choose which specialty this piece of equipment belongs to.');
+      setError('Choose which therapy this instrument belongs to.');
       return;
     }
     if (!name.trim()) {
-      setError('Name the equipment.');
+      setError('Name the instrument.');
       return;
     }
     if (!usedFor.trim()) {
-      setError('Say what this equipment is used for.');
+      setError('Say what the instrument is used for.');
       return;
     }
     if (!image) {
-      setError('Add a photo of the equipment.');
+      setError('Add a photo of the instrument.');
       return;
     }
     setBusy(true);
@@ -125,48 +123,48 @@ export default function InstrumentsScreen() {
       cancelAdd();
       await load();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not add that equipment.');
+      setError(reason instanceof Error ? reason.message : 'Could not add that instrument.');
     } finally {
       setBusy(false);
     }
   }
 
   async function removeInstrument(item: Instrument) {
-    const ok = await confirmAction('Remove this equipment?', item.name);
+    const ok = await confirmAction('Remove this instrument?', item.name);
     if (!ok) return;
     try {
       await api.deleteInstrument(item.id);
       await load();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not remove that equipment.');
+      setError(reason instanceof Error ? reason.message : 'Could not remove that instrument.');
     }
   }
 
   const form = (
     <View className={wide ? 'ml-8 w-96' : 'mt-6'}>
       <Text style={font.display} className="mb-4 text-2xl text-ink">
-        Add equipment
+        Add an instrument
       </Text>
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Specialty
+        Therapy
       </Text>
       <View className="flex-row flex-wrap">
-        {specialties.map((item) => (
+        {PATIENT_TYPES.map((item) => (
           <Chip key={item} label={item} active={formTherapy === item} onPress={() => setFormTherapy(item)} />
         ))}
       </View>
       {formTherapy ? null : (
         <Text style={[font.sans, { color: '#9b3b36' }]} className="mb-3 text-sm leading-5">
-          Choose a specialty first so this equipment is listed with the right tools.
+          Choose a therapy first so this instrument is listed with the right tools.
         </Text>
       )}
-      <Field label="Name" value={name} onChangeText={setName} placeholder="Stethoscope" />
+      <Field label="Name" value={name} onChangeText={setName} placeholder="Gait belt" />
       <Field
         label="Used for"
         value={usedFor}
         onChangeText={setUsedFor}
         multiline
-        placeholder="What this equipment is used for"
+        placeholder="What this instrument is used for"
       />
       <Pressable accessibilityRole="button" onPress={() => void pickImage()} className="mb-4 rounded-xl border border-dashed border-line bg-card px-3 py-4">
         <Text style={font.medium} className="text-sm text-ink">
@@ -176,7 +174,7 @@ export default function InstrumentsScreen() {
       <View className="flex-row">
         <View className="mr-3 flex-1">
           <Button
-            label={busy ? 'Adding…' : 'Save equipment'}
+            label={busy ? 'Adding…' : 'Save instrument'}
             disabled={busy || !formTherapy || !name.trim() || !usedFor.trim() || !image}
             onPress={() => void submit()}
           />
@@ -192,12 +190,12 @@ export default function InstrumentsScreen() {
     <Screen>
       <View className="flex-row items-start justify-between">
         <View className="mr-4 flex-1">
-          <PageTitle kicker="Clinic" title="Equipment" detail="Tools the clinic uses, with a photo and what each one is for." />
+          <PageTitle kicker="Clinic" title="Instruments" detail="Each therapy keeps the tools it uses, with a photo and what they are for." />
         </View>
         {adding ? null : (
           <Pressable accessibilityRole="button" onPress={beginAdd} className="mt-1 rounded-full bg-clay px-3 py-2">
             <Text style={font.medium} className="text-sm text-card">
-              Add equipment
+              Add an instrument
             </Text>
           </Pressable>
         )}
@@ -207,11 +205,11 @@ export default function InstrumentsScreen() {
       <View className={wide && adding ? 'flex-row items-start' : ''}>
         <View className={wide && adding ? 'flex-1' : ''}>
           <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-            Specialty
+            Therapy
           </Text>
           <View className="mb-4 flex-row flex-wrap">
-            {limited ? null : <Chip label="All" active={therapy == null} onPress={() => setTherapy(null)} />}
-            {specialties.map((item) => (
+            <Chip label="All" active={therapy == null} onPress={() => setTherapy(null)} />
+            {PATIENT_TYPES.map((item) => (
               <Chip key={item} label={item} active={therapy === item} onPress={() => setTherapy(item)} />
             ))}
           </View>
@@ -224,7 +222,7 @@ export default function InstrumentsScreen() {
               )}
               {group.items.length === 0 ? (
                 <Text style={font.sans} className="text-base text-mute">
-                  No equipment yet.
+                  No instruments yet.
                 </Text>
               ) : (
                 group.items.map((item) => (

@@ -3,7 +3,6 @@ const express = require('express');
 const { pool } = require('../db');
 const { requireAuth } = require('../auth');
 const { THERAPY_SET } = require('../care');
-const { domainOf } = require('../scope');
 const { asyncHandler, fail } = require('../http');
 
 const router = express.Router();
@@ -12,13 +11,11 @@ router.use(requireAuth);
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const domain = await domainOf(req);
-    const requested = typeof req.query.therapy === 'string' ? req.query.therapy.trim() : '';
-    if (domain == null && requested && !THERAPY_SET.has(requested)) throw fail(400, 'Choose a specialty.');
-    const therapy = domain == null ? requested : domain;
+    const therapy = typeof req.query.therapy === 'string' ? req.query.therapy.trim() : '';
+    if (therapy && !THERAPY_SET.has(therapy)) throw fail(400, 'Choose a therapy type.');
     const params = [];
     let where = 'WHERE therapy_type IS NOT NULL';
-    if (domain != null || therapy) {
+    if (therapy) {
       params.push(therapy);
       where += ' AND therapy_type = $1';
     }

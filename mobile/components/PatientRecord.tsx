@@ -1,19 +1,17 @@
-import { createElement, useCallback, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { addMinutes, ageFrom, DURATIONS, formatLong, PAYER_TYPES, START_TIMES, hasSessionQuota, remainingSessions, todayISO } from '../lib/format';
-import { patientReportHtml } from '../lib/patientReport';
-import { canEdit, specialtiesFor } from '../lib/permissions';
+import { addMinutes, ageFrom, DURATIONS, formatLong, PATIENT_TYPES, PAYER_TYPES, START_TIMES, hasSessionQuota, remainingSessions, todayISO } from '../lib/format';
+import { canEdit } from '../lib/permissions';
 import type { Doctor, Patient, Reservation, VisitStatus } from '../lib/types';
 import { SessionCounts, SessionList } from './SessionList';
 import { Banner, Button, Chip, Field, TherapyPill, font, therapySurface } from './ui';
 
 export function PatientRecord({ patientId, showBack }: { patientId: number; showBack?: boolean }) {
   const { user } = useAuth();
-  const specialties = specialtiesFor(user);
   const router = useRouter();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [visits, setVisits] = useState<Reservation[]>([]);
@@ -31,7 +29,6 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
   const [allottedChoice, setAllottedChoice] = useState('');
   const [sessionDoctorId, setSessionDoctorId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [reportHtml, setReportHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [date, setDate] = useState(todayISO());
@@ -53,7 +50,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
       const left = remainingSessions(person.patient.sessionsAllotted, person.patient.sessionCount);
       setPatient(person.patient);
       setNotes(person.patient.notes ?? '');
-      setPatientType(person.patient.patientType === 'Company' || person.patient.patientType === 'Insurance' ? person.patient.patientType : 'Private');
+      setPatientType(person.patient.patientType === 'Company' || person.patient.patientType === 'Islamic' ? person.patient.patientType : 'Private');
       setSessionsAllotted(person.patient.sessionsAllotted ?? null);
       setAllottedChoice(left != null ? String(left) : '');
       setTherapy(person.patient.therapyType ?? null);
@@ -108,7 +105,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
       const left = remainingSessions(result.patient.sessionsAllotted, result.patient.sessionCount);
       setPatient(result.patient);
       setNotes(result.patient.notes ?? '');
-      setPatientType(result.patient.patientType === 'Company' || result.patient.patientType === 'Insurance' ? result.patient.patientType : 'Private');
+      setPatientType(result.patient.patientType === 'Company' || result.patient.patientType === 'Islamic' ? result.patient.patientType : 'Private');
       setSessionsAllotted(result.patient.sessionsAllotted ?? null);
       setAllottedChoice(left != null ? String(left) : '');
       setTherapy(result.patient.therapyType ?? null);
@@ -170,7 +167,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
       return;
     }
     if (therapy && !sessionDoctorId) {
-      setError('Choose the clinician for this specialty.');
+      setError('Choose the doctor for this therapy.');
       return;
     }
     setError(null);
@@ -211,12 +208,6 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
     .sort((left, right) => right.scheduledDate.localeCompare(left.scheduledDate) || right.startTime.localeCompare(left.startTime));
   const age = ageFrom(patient?.dateOfBirth ?? null);
 
-  function createReport() {
-    if (!patient) return;
-    setError(null);
-    setReportHtml(patientReportHtml(patient, visits, user));
-  }
-
   return (
     <ScrollView className="flex-1 bg-paper" contentContainerStyle={{ padding: 24, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
       {showBack ? (
@@ -253,46 +244,14 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
           <Text style={font.sans} className="mt-1 text-base text-mute">
             {[patient.phone, patient.email].filter(Boolean).join(' · ') || 'No phone or email'}
           </Text>
-          {reportHtml ? (
-            <View className="mt-4">
-              <View className="mb-3 self-start">
-                <Button label="Close report" tone="ghost" onPress={() => setReportHtml(null)} />
-              </View>
-              {Platform.OS === 'web'
-                ? createElement('iframe', {
-                    title: `${patient.fullName} report`,
-                    srcDoc: reportHtml,
-                    onLoad: (event: { currentTarget: { style: { height: string }; contentDocument: Document | null } }) => {
-                      const height = event.currentTarget.contentDocument?.documentElement.scrollHeight;
-                      if (height) event.currentTarget.style.height = `${height}px`;
-                    },
-                    style: {
-                      width: '100%',
-                      height: 640,
-                      border: '1px solid #c9e4e4',
-                      borderRadius: 16,
-                      backgroundColor: '#ffffff',
-                    },
-                  })
-                : (
-                  <Text style={font.sans} className="text-base text-mute">
-                    Open the clinic in a browser to read and print this report.
-                  </Text>
-                )}
-            </View>
-          ) : (
-            <View className="mt-4 self-start">
-              <Button label="Create report" tone="pine" onPress={createReport} />
-            </View>
-          )}
 
           <View className="mt-5 rounded-2xl border p-4" style={therapySurface(therapy)}>
             <View className="mb-2 flex-row items-center justify-between">
               <Text style={font.medium} className="text-xs uppercase tracking-widest text-moss">
-                Specialty
+                Therapy
               </Text>
               {editingCare ? null : (
-                <Pressable accessibilityRole="button" accessibilityLabel="Edit specialty, clinician, and coverage" onPress={beginCareEdit}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Edit therapy, doctor, and type" onPress={beginCareEdit}>
                   <Text style={font.medium} className="text-sm text-moss">
                     Edit
                   </Text>
@@ -301,17 +260,17 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
             </View>
             {editingCare ? (
               <View className="flex-row flex-wrap">
-                {specialties.map((item) => (
+                {PATIENT_TYPES.map((item) => (
                   <Chip key={item} label={item} active={therapyChoice === item} onPress={() => chooseTherapy(item)} />
                 ))}
               </View>
             ) : (
               <Text style={font.sans} className="text-base text-ink">
-                {therapy || 'No specialty yet.'}
+                {therapy || 'No therapy yet.'}
               </Text>
             )}
             <Text style={font.medium} className="mb-2 mt-4 text-xs uppercase tracking-widest text-moss">
-              Clinician
+              Doctor
             </Text>
             {editingCare ? (
               <View className="flex-row flex-wrap">
@@ -323,7 +282,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
               </View>
             ) : (
               <Text style={font.sans} className="text-base text-ink">
-                {doctorName || 'No clinician yet.'}
+                {doctorName || 'No doctor yet.'}
               </Text>
             )}
             <Text style={font.medium} className="mb-2 mt-4 text-xs uppercase tracking-widest text-moss">
@@ -439,7 +398,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
               {therapy ? (
                 <>
                   <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-                    Clinician
+                    Doctor
                   </Text>
                   <View className="flex-row flex-wrap">
                     {doctors

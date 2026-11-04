@@ -28,7 +28,7 @@ export type Patient = {
   doctorId?: number | null;
   doctorName?: string | null;
   createdAt?: string;
-  patientType?: 'Private' | 'Company' | 'Insurance' | null;
+  patientType?: 'Private' | 'Company' | 'Islamic' | null;
   sessionsAllotted?: number | null;
   sessionCount?: number;
   nextVisit?: string | null;
@@ -51,7 +51,7 @@ export type Reservation = {
   status: VisitStatus;
   notes: string | null;
   amountPaid?: number | null;
-  patientType?: 'Private' | 'Company' | 'Insurance' | null;
+  patientType?: 'Private' | 'Company' | 'Islamic' | null;
   therapyType?: string | null;
   createdByName: string | null;
 };

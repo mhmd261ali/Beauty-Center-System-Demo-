@@ -3,10 +3,6 @@ const path = require('path');
 const zlib = require('zlib');
 
 const ITEMS = [
-  ['General practice', 'Stethoscope', 'Listening to the heart, lungs, and abdomen.', [61, 92, 158]],
-  ['General practice', 'Blood pressure cuff', 'Routine pressure checks at the start of a visit.', [30, 64, 120]],
-  ['Pediatrics', 'Otoscope', 'Looking in the ears during a child visit.', [140, 72, 140]],
-  ['Pediatrics', 'Growth chart', 'Tracking height and weight against age.', [196, 150, 196]],
   ['Occupational therapy', 'Weighted vest', 'Gives steady pressure so a child can sit and work.', [75, 187, 188]],
   ['Occupational therapy', 'Therapy putty', 'Builds hand strength, pinch, and finger isolation.', [15, 92, 94]],
   ['Occupational therapy', 'Sensory brush', 'Deep pressure before a session to help regulation.', [154, 220, 220]],

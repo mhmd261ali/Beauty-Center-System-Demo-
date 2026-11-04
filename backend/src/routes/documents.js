@@ -7,7 +7,6 @@ const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
 const { asyncHandler, fail, text } = require('../http');
 const { uploadsDir } = require('../paths');
-const { domainOf, assertDomain } = require('../scope');
 
 const ALLOWED = new Set([
   'application/pdf',
@@ -72,22 +71,15 @@ router.get(
   asyncHandler(async (req, res) => {
     const term = String(req.query.q || '').trim();
     const pattern = term ? `%${term}%` : null;
-    const domain = await domainOf(req);
     const { rows } = await pool.query(
       `
       ${documentSelect}
       WHERE d.stored_name IS NOT NULL
         AND ($1::text IS NULL OR d.name ILIKE $1)
-        AND (
-          $2::text IS NULL
-          OR (d.patient_id IS NULL AND d.staff_id IS NULL)
-          OR p.therapy_type = $2
-          OR (d.patient_id IS NULL AND s.therapy_type = $2)
-        )
       ORDER BY d.created_at DESC
       LIMIT 200
       `,
-      [pattern, domain],
+      [pattern],
     );
     res.json({
       documents: rows.map(({ storedName, ...document }) => document),
@@ -155,21 +147,11 @@ router.get(
   '/:id/file',
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      `
-      SELECT d.file_name, d.stored_name, p.therapy_type AS "patientTherapy", s.therapy_type AS "staffTherapy", d.patient_id, d.staff_id
-      FROM documents d
-      LEFT JOIN patients p ON p.id = d.patient_id
-      LEFT JOIN users s ON s.id = d.staff_id
-      WHERE d.id = $1
-      `,
+      'SELECT file_name, stored_name FROM documents WHERE id = $1',
       [req.params.id],
     );
     const row = rows[0];
     if (!row || !row.stored_name) throw fail(404, 'That document has no file.');
-    const domain = await domainOf(req);
-    if (domain != null && (row.patient_id || row.staff_id)) {
-      assertDomain(domain, row.patient_id ? row.patientTherapy : row.staffTherapy, 'That file is outside your specialty.');
-    }
     const full = path.resolve(uploadsDir, path.basename(row.stored_name));
     if (!full.startsWith(path.resolve(uploadsDir))) throw fail(400, 'Cannot open that file.');
     if (!fs.existsSync(full)) throw fail(404, 'The file is missing from the server.');
