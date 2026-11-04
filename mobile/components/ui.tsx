@@ -18,9 +18,11 @@ export const STATUS: Record<VisitStatus, { label: string; bg: string; fg: string
 };
 
 export const THERAPY_TONE: Record<string, { label: string; bg: string; fg: string; line: string; mark: string }> = {
+  'General practice': { label: 'General', bg: '#eef3fb', fg: '#1e3a5f', line: '#c5d4ee', mark: '#3d6cb3' },
+  Pediatrics: { label: 'Pediatrics', bg: '#f8eef8', fg: '#6b2d6b', line: '#e4c6e4', mark: '#b45eb4' },
   'Occupational therapy': { label: 'Occupational', bg: '#e9f7f6', fg: '#0f5c5e', line: '#9adcdc', mark: '#4BBBBC' },
   'Speech therapy': { label: 'Speech', bg: '#fff5e8', fg: '#8a4e12', line: '#f0cba0', mark: '#e09a45' },
-  'Physiotherapy': { label: 'Physiotherapy', bg: '#eaf6ee', fg: '#1b6b40', line: '#a3d4b4', mark: '#3d9a62' },
+  Physiotherapy: { label: 'Physiotherapy', bg: '#eaf6ee', fg: '#1b6b40', line: '#a3d4b4', mark: '#3d9a62' },
 };
 
 export const THERAPY_FALLBACK = { label: 'Unassigned', bg: '#f3f4f8', fg: '#4a4e6a', line: '#cfd2de', mark: '#8b90b0' };

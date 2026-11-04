@@ -12,7 +12,7 @@ const ITEMS = [
   { href: '/calendar', label: 'Month', icon: 'month' },
   { href: '/patients', label: 'Patients', icon: 'patients' },
   { href: '/documents', label: 'Documents', icon: 'documents' },
-  { href: '/instruments', label: 'Instruments', icon: 'instruments' },
+  { href: '/instruments', label: 'Equipment', icon: 'instruments' },
 ] as const;
 
 type NavIconName = (typeof ITEMS)[number]['icon'] | 'staff' | 'income';
@@ -39,7 +39,7 @@ export function SideNav({ user, insetTop, insetBottom, onSignOut }: { user: User
           Halden
         </Text>
         <Text style={font.sans} className="mb-8 mt-1 text-sm text-sand">
-          Clinic desk
+          Clinic
         </Text>
         {items.map((item) => {
           const active = isActive(pathname, item.href);

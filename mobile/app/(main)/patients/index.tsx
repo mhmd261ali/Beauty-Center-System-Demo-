@@ -5,7 +5,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Screen } from '../../../components/Screen';
 import { Banner, Chip, DateField, Field, PageTitle, TherapyPill, font, therapySurface } from '../../../components/ui';
 import { api } from '../../../lib/api';
-import { GENDERS, PATIENT_TYPES, PAYER_TYPES, WIDE, addDays, hasSessionQuota, sessionQuotaLabel, todayISO } from '../../../lib/format';
+import { useAuth } from '../../../lib/auth';
+import { GENDERS, PAYER_TYPES, WIDE, addDays, hasSessionQuota, sessionQuotaLabel, todayISO } from '../../../lib/format';
+import { specialtiesFor } from '../../../lib/permissions';
 import type { Patient } from '../../../lib/types';
 const SORTS = [
   { id: 'name-asc', label: 'Name A–Z' },
@@ -24,6 +26,8 @@ function nextSessionDate(patient: Patient) {
 
 export default function PatientsScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const specialties = specialtiesFor(user);
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
   const [query, setQuery] = useState('');
@@ -115,11 +119,11 @@ export default function PatientsScreen() {
   const filters = (
     <View className={`rounded-2xl border border-line bg-card p-4 ${wide ? 'w-80' : 'mb-6'}`}>
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Type
+        Specialty
       </Text>
       <View className="flex-row flex-wrap">
         <Chip label="All" active={type === 'All'} onPress={() => setType('All')} />
-        {PATIENT_TYPES.map((item) => (
+        {specialties.map((item) => (
           <Chip key={item} label={item} active={type === item} onPress={() => setType(item)} />
         ))}
       </View>

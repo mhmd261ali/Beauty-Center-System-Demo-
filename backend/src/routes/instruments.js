@@ -7,6 +7,7 @@ const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
 const { asyncHandler, fail, text } = require('../http');
 const { THERAPY_SET } = require('../care');
+const { domainOf, assertDomain } = require('../scope');
 const { uploadsDir } = require('../paths');
 
 const IMAGES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
@@ -57,8 +58,10 @@ function publicInstrument(row) {
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const therapy = text(req.query.therapy, 80, 'Therapy');
-    if (therapy && !THERAPY_SET.has(therapy)) throw fail(400, 'Choose a therapy type.');
+    const domain = await domainOf(req);
+    const requested = text(req.query.therapy, 80, 'Specialty');
+    if (domain == null && requested && !THERAPY_SET.has(requested)) throw fail(400, 'Choose a specialty.');
+    const therapy = domain == null ? requested : domain;
     const { rows } = await pool.query(
       `
       ${instrumentSelect}
@@ -86,11 +89,12 @@ router.post(
   asyncHandler(async (req, res) => {
     const name = text(req.body.name, 160, 'Name');
     const usedFor = text(req.body.usedFor, 2000, 'Used for');
-    const therapyType = text(req.body.therapyType, 80, 'Therapy');
-    if (!therapyType || !THERAPY_SET.has(therapyType)) throw fail(400, 'Choose a therapy type.');
-    if (!name) throw fail(400, 'Name the instrument.');
-    if (!usedFor) throw fail(400, 'Say what the instrument is used for.');
-    if (!req.file) throw fail(400, 'Add a photo of the instrument.');
+    const domain = await domainOf(req);
+    const therapyType = domain == null ? text(req.body.therapyType, 80, 'Specialty') : domain;
+    if (!therapyType || !THERAPY_SET.has(therapyType)) throw fail(400, 'Choose a specialty.');
+    if (!name) throw fail(400, 'Name the equipment.');
+    if (!usedFor) throw fail(400, 'Say what the equipment is used for.');
+    if (!req.file) throw fail(400, 'Add a photo of the equipment.');
     const { rows } = await pool.query(
       `
       INSERT INTO instruments (therapy_type, name, used_for, file_name, stored_name, mime_type, added_by)
@@ -108,11 +112,12 @@ router.get(
   '/:id/image',
   asyncHandler(async (req, res) => {
     const { rows } = await pool.query(
-      'SELECT stored_name, mime_type FROM instruments WHERE id = $1',
+      'SELECT stored_name, mime_type, therapy_type AS "therapyType" FROM instruments WHERE id = $1',
       [req.params.id],
     );
     const row = rows[0];
-    if (!row || !row.stored_name) throw fail(404, 'That instrument has no photo.');
+    if (!row || !row.stored_name) throw fail(404, 'That equipment has no photo.');
+    assertDomain(await domainOf(req), row.therapyType, 'That equipment is outside your specialty.');
     const full = path.resolve(uploadsDir, path.basename(row.stored_name));
     if (!full.startsWith(path.resolve(uploadsDir))) throw fail(400, 'Cannot open that file.');
     if (!fs.existsSync(full)) throw fail(404, 'The photo is missing from the server.');

@@ -4,14 +4,14 @@ export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const DURATIONS = [15, 20, 30, 45, 60, 90, 120, 150, 180];
 
-export const PATIENT_TYPES = ['Occupational therapy', 'Speech therapy', 'Physiotherapy'];
+export const PATIENT_TYPES = ['General practice', 'Pediatrics', 'Physiotherapy', 'Occupational therapy', 'Speech therapy'];
 
 export const GENDERS = ['Male', 'Female'] as const;
 
-export const PAYER_TYPES = ['Private', 'Company', 'Islamic'] as const;
+export const PAYER_TYPES = ['Private', 'Insurance', 'Company'] as const;
 
 export function hasSessionQuota(type?: string | null) {
-  return type === 'Company' || type === 'Islamic';
+  return type === 'Company' || type === 'Insurance';
 }
 
 export function remainingSessions(allotted?: number | null, used?: number | null) {

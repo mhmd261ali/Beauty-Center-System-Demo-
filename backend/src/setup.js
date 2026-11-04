@@ -110,6 +110,8 @@ async function runSetup() {
     const adminId = staff.rows.find((row) => row.email === 'admin@halden.clinic').id;
     const doctorPassword = bcrypt.hashSync('doctor123', 10);
     const doctors = [
+      ['Dr. Elena Costa', 'elena.costa@halden.clinic', 'General practice'],
+      ['Dr. James Okonkwo', 'james.okonkwo@halden.clinic', 'Pediatrics'],
       ['Maryam', 'maryam@halden.clinic', 'Physiotherapy'],
       ['Khadija', 'khadija@halden.clinic', 'Physiotherapy'],
       ['Rana', 'rana@halden.clinic', 'Occupational therapy'],

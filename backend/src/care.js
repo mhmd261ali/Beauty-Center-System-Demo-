@@ -1,7 +1,7 @@
 const { pool } = require('./db');
 const { fail } = require('./http');
 
-const THERAPIES = ['Occupational therapy', 'Speech therapy', 'Physiotherapy'];
+const THERAPIES = ['General practice', 'Pediatrics', 'Physiotherapy', 'Occupational therapy', 'Speech therapy'];
 const THERAPY_SET = new Set(THERAPIES);
 
 function therapyOf(value) {
@@ -11,17 +11,17 @@ function therapyOf(value) {
 
 async function doctorFor(doctorId, therapyType) {
   const id = doctorId == null || doctorId === '' ? null : Number(doctorId);
-  if (id != null && !Number.isInteger(id)) throw fail(400, 'Choose a doctor.');
-  if (therapyType && !THERAPY_SET.has(therapyType)) throw fail(400, 'Choose a therapy type.');
+  if (id != null && !Number.isInteger(id)) throw fail(400, 'Choose a clinician.');
+  if (therapyType && !THERAPY_SET.has(therapyType)) throw fail(400, 'Choose a specialty.');
   if (!id) return { doctorId: null, doctorName: null };
   const { rows } = await pool.query(
     'SELECT id, name, therapy_type AS "therapyType" FROM users WHERE id = $1 AND therapy_type IS NOT NULL',
     [id],
   );
   const doctor = rows[0];
-  if (!doctor) throw fail(400, 'Choose a doctor.');
+  if (!doctor) throw fail(400, 'Choose a clinician.');
   if (therapyType && doctor.therapyType !== therapyType) {
-    throw fail(400, 'That doctor does not follow this therapy.');
+    throw fail(400, 'That clinician does not cover this specialty.');
   }
   return { doctorId: doctor.id, doctorName: doctor.name };
 }

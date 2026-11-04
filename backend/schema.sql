@@ -23,7 +23,7 @@ CREATE TABLE patients (
   doctor TEXT,
   doctors TEXT[] NOT NULL DEFAULT '{}',
   doctor_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
-  patient_type TEXT NOT NULL DEFAULT 'Private' CHECK (patient_type IN ('Private', 'Company', 'Islamic')),
+  patient_type TEXT NOT NULL DEFAULT 'Private' CHECK (patient_type IN ('Private', 'Company', 'Insurance')),
   sessions_allotted INTEGER CHECK (sessions_allotted IS NULL OR sessions_allotted >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

@@ -16,6 +16,7 @@ const doctorRoutes = require('./routes/doctors');
 const instrumentRoutes = require('./routes/instruments');
 const incomeRoutes = require('./routes/income');
 const dashboardRoutes = require('./routes/dashboard');
+const { widenDemo } = require('./generalDemo');
 
 const app = express();
 app.disable('x-powered-by');

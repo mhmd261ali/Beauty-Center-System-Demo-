@@ -10,8 +10,8 @@ import { Banner, Button, Chip, DateField, Field, PageTitle, TherapyPill, confirm
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { downloadDocument } from '../../lib/files';
-import { PATIENT_TYPES, addDays, formatStamp, todayISO } from '../../lib/format';
-import { canDelete, canUpload } from '../../lib/permissions';
+import { addDays, formatStamp, todayISO } from '../../lib/format';
+import { canDelete, canUpload, specialtiesFor } from '../../lib/permissions';
 import type { DocumentRow, Patient, PickedFile, User } from '../../lib/types';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -19,6 +19,7 @@ const PATIENT_PAGE = 10;
 
 export default function DocumentsScreen() {
   const { user } = useAuth();
+  const specialties = specialtiesFor(user);
   const { width, height } = useWindowDimensions();
   const [query, setQuery] = useState('');
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
@@ -274,7 +275,7 @@ export default function DocumentsScreen() {
     <Screen>
       <View className="flex-row items-start justify-between">
         <View className="mr-4 flex-1">
-          <PageTitle kicker="Files" title="Documents" detail="Search and filter by patient, who added it, therapy, or date." />
+          <PageTitle kicker="Files" title="Documents" detail="Search and filter by patient, who added it, specialty, or date." />
         </View>
         <View className="mt-1 flex-row">
           <Pressable
@@ -370,7 +371,7 @@ export default function DocumentsScreen() {
               </Text>
               <View className="flex-row flex-wrap">
                 <Chip label="All" active={therapy === 'All'} onPress={() => setTherapy('All')} />
-                {PATIENT_TYPES.map((item) => (
+                {specialties.map((item) => (
                   <Chip key={item} label={item} active={therapy === item} onPress={() => setTherapy(item)} />
                 ))}
               </View>

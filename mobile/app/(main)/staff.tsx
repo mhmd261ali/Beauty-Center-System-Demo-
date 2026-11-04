@@ -39,11 +39,15 @@ function AccountFields({
   onChange,
   passwordLabel,
   passwordPlaceholder,
+  lockAccess,
+  phoneOptional,
 }: {
   draft: AccountDraft;
   onChange: (next: AccountDraft) => void;
   passwordLabel: string;
   passwordPlaceholder?: string;
+  lockAccess?: boolean;
+  phoneOptional?: boolean;
 }) {
   return (
     <View>
@@ -67,9 +71,11 @@ function AccountFields({
         label="Phone number"
         value={draft.phone}
         onChangeText={(phone) => onChange({ ...draft, phone })}
-        placeholder="555-0100"
+        placeholder={phoneOptional ? 'Optional' : '555-0100'}
         keyboardType="phone-pad"
       />
+      {lockAccess ? null : (
+        <>
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
         Role
       </Text>
@@ -79,7 +85,7 @@ function AccountFields({
         ))}
       </View>
       <Text style={font.medium} className="mb-2 mt-2 text-xs uppercase tracking-widest text-moss">
-        Therapy
+        Specialty
       </Text>
       <View className="flex-row flex-wrap">
         <Chip label="None" active={draft.therapy == null} onPress={() => onChange({ ...draft, therapy: null })} />
@@ -87,6 +93,8 @@ function AccountFields({
           <Chip key={item} label={item} active={draft.therapy === item} onPress={() => onChange({ ...draft, therapy: item })} />
         ))}
       </View>
+        </>
+      )}
     </View>
   );
 }
@@ -103,7 +111,8 @@ export default function StaffScreen() {
   const [formError, setFormError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState<'create' | 'save' | null>(null);
-  const allowed = user ? canManageStaff(user.role) : false;
+  const manager = user ? canManageStaff(user.role) : false;
+  const allowed = manager;
   const addMaxHeight = height - 32;
 
   const load = useCallback(async () => {
@@ -111,7 +120,6 @@ export default function StaffScreen() {
     try {
       const data = await api.users();
       setPeople(data.users);
-      setError(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not load staff.');
     }
@@ -230,16 +238,22 @@ export default function StaffScreen() {
     <Screen>
       <View className="flex-row items-start justify-between">
         <View className="mr-4 flex-1">
-          <PageTitle kicker="Staff" title="Desk accounts" detail="Each account has a name, email, password, and phone number." />
+          <PageTitle
+            kicker="Staff"
+            title="Staff accounts"
+            detail={manager ? 'Front desk and clinicians. A specialty marks who sees patients.' : 'Clinicians in your specialty.'}
+          />
         </View>
-        <Pressable accessibilityRole="button" onPress={beginAdd} className="mt-1 rounded-full bg-clay px-3 py-2">
-          <Text style={font.medium} className="text-sm text-card">
-            Add account
-          </Text>
-        </Pressable>
+        {manager ? (
+          <Pressable accessibilityRole="button" onPress={beginAdd} className="mt-1 rounded-full bg-clay px-3 py-2">
+            <Text style={font.medium} className="text-sm text-card">
+              Add account
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
       {message ? <Banner tone="ok">{message}</Banner> : null}
-      {error ? <Banner tone="error">{error}</Banner> : null}
+      {error && editingId == null ? <Banner tone="error">{error}</Banner> : null}
       {people.map((person) => (
         <View key={person.id} className="mb-3 rounded-2xl border px-4 py-3" style={therapySurface(person.therapyType)}>
           {editingId === person.id ? (
@@ -249,7 +263,10 @@ export default function StaffScreen() {
                 onChange={setEditDraft}
                 passwordLabel="Password"
                 passwordPlaceholder="Leave blank to keep it"
+                lockAccess={!manager}
+                phoneOptional
               />
+              {error ? <Banner tone="error">{error}</Banner> : null}
               <View className="flex-row">
                 <View className="mr-3 flex-1">
                   <Button label={busy === 'save' ? 'Saving…' : 'Save'} disabled={busy != null} onPress={() => void saveEdit(person)} />
@@ -279,33 +296,35 @@ export default function StaffScreen() {
                     <TherapyPill therapy={person.therapyType} />
                   </View>
                 ) : null}
-                <View className="mt-2 flex-row items-center">
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Edit ${person.name}`}
-                    onPress={() => beginEdit(person)}
-                    className="h-10 w-10 items-center justify-center rounded-full"
-                  >
-                    <ActionIcon kind="edit" />
-                  </Pressable>
-                  {user && person.id !== user.id ? (
+                {manager || person.id === user?.id ? (
+                  <View className="mt-2 flex-row items-center">
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`Remove ${person.name}`}
-                      onPress={() => void remove(person)}
+                      accessibilityLabel={`Edit ${person.name}`}
+                      onPress={() => beginEdit(person)}
                       className="h-10 w-10 items-center justify-center rounded-full"
                     >
-                      <ActionIcon kind="remove" />
+                      <ActionIcon kind="edit" />
                     </Pressable>
-                  ) : null}
-                </View>
+                    {manager && user && person.id !== user.id ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove ${person.name}`}
+                        onPress={() => void remove(person)}
+                        className="h-10 w-10 items-center justify-center rounded-full"
+                      >
+                        <ActionIcon kind="remove" />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
             </View>
           )}
         </View>
       ))}
 
-      {adding ? (
+      {manager && adding ? (
         <Modal visible transparent animationType="fade" onRequestClose={cancelAdd}>
           <View className="flex-1 items-center justify-center px-4 py-4" style={{ backgroundColor: 'rgba(18, 48, 51, 0.45)' }}>
             <Pressable accessibilityRole="button" accessibilityLabel="Close add account" onPress={cancelAdd} className="absolute inset-0" />
@@ -364,6 +383,7 @@ function checkDraft(draft: AccountDraft, passwordRequired: boolean) {
   if (!draft.email.trim().includes('@')) return 'Enter a valid email.';
   if (passwordRequired && draft.password.length < 6) return 'Use a password of at least 6 characters.';
   if (!passwordRequired && draft.password && draft.password.length < 6) return 'Use a password of at least 6 characters.';
-  if (draft.phone.trim().length < 3) return 'Enter a phone number.';
+  if (passwordRequired && draft.phone.trim().length < 3) return 'Enter a phone number.';
+  if (!passwordRequired && draft.phone.trim() && draft.phone.trim().length < 3) return 'Enter a phone number.';
   return null;
 }

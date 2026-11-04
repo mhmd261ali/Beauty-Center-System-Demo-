@@ -8,16 +8,15 @@ import { Banner, Button, Chip, DateField, Field, PageTitle, font } from '../../c
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { DURATIONS, PATIENT_TYPES, START_TIMES, WIDE, addDays, addMinutes, formatClock, formatDay, todayISO } from '../../lib/format';
-import { canEdit } from '../../lib/permissions';
+import { canEdit, specialtiesFor } from '../../lib/permissions';
 import type { Doctor, Patient } from '../../lib/types';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-const REASONS = PATIENT_TYPES;
-
 export default function ReserveScreen() {
   const params = useLocalSearchParams<{ date?: string }>();
   const { user } = useAuth();
+  const reasons = specialtiesFor(user);
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
   const passedDate = typeof params.date === 'string' && DATE.test(params.date) ? params.date : todayISO();
@@ -75,7 +74,7 @@ export default function ReserveScreen() {
       return;
     }
     if (visitTherapy && !doctorId) {
-      setError('Choose the doctor for this therapy.');
+      setError('Choose the clinician for this specialty.');
       return;
     }
     setBusy(true);
@@ -156,7 +155,7 @@ export default function ReserveScreen() {
         Reason
       </Text>
       <View className="flex-row flex-wrap">
-        {REASONS.map((item) => (
+        {reasons.map((item) => (
           <Chip key={item} label={item} active={reason === item} onPress={() => chooseReason(item)} />
         ))}
       </View>
@@ -173,7 +172,7 @@ export default function ReserveScreen() {
       {visitTherapy ? (
         <>
           <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-            Doctor
+            Clinician
           </Text>
           <View className="flex-row flex-wrap">
             {doctors
@@ -184,7 +183,7 @@ export default function ReserveScreen() {
           </View>
         </>
       ) : null}
-      <Field label="Notes" value={notes} onChangeText={setNotes} multiline placeholder="Anything the desk should know" />
+      <Field label="Notes" value={notes} onChangeText={setNotes} multiline placeholder="Anything the clinic should know" />
       <Button label={busy ? 'Booking…' : 'Book the visit'} disabled={busy} onPress={() => void submit()} />
       {user && !canEdit(user.role) ? (
         <Text style={font.sans} className="mt-3 text-sm leading-5 text-mute">

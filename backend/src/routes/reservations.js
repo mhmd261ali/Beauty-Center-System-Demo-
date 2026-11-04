@@ -4,6 +4,7 @@ const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
 const { asyncHandler, fail, isDate, isTime, minutes, money, text } = require('../http');
 const { therapyOf, doctorFor } = require('../care');
+const { domainOf, assertDomain } = require('../scope');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -44,7 +45,7 @@ async function findReservation(id) {
   return rows[0] || null;
 }
 
-async function overlapsFor(reservation) {
+async function overlapsFor(reservation, domain) {
   const { rows } = await pool.query(
     `
     ${reservationSelect}
@@ -53,9 +54,10 @@ async function overlapsFor(reservation) {
       AND r.status <> 'cancelled'
       AND r.start_time < $4::time
       AND r.end_time > $3::time
+      AND ($5::text IS NULL OR p.therapy_type = $5)
     ORDER BY r.start_time
     `,
-    [reservation.scheduledDate, reservation.id, reservation.startTime, reservation.endTime],
+    [reservation.scheduledDate, reservation.id, reservation.startTime, reservation.endTime, domain ?? null],
   );
   return rows;
 }
@@ -104,6 +106,9 @@ router.get(
       params.push(patientId);
       clauses.push(`r.patient_id = $${params.length}`);
     }
+    const domain = await domainOf(req);
+    params.push(domain);
+    clauses.push(`($${params.length}::text IS NULL OR p.therapy_type = $${params.length})`);
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
     const { rows } = await pool.query(
       `${reservationSelect} ${where} ORDER BY r.scheduled_date, r.start_time, r.id`,
@@ -132,9 +137,15 @@ router.post(
       if (!Number.isInteger(patientId)) throw fail(400, 'Choose a registered patient.');
       const found = await client.query('SELECT id, therapy_type FROM patients WHERE id = $1', [patientId]);
       if (!found.rows[0]) throw fail(404, 'Patient not found.');
-      const therapy = therapyOf(schedule.reason) || therapyOf(found.rows[0].therapy_type);
+      const domain = await domainOf(req);
+      assertDomain(domain, found.rows[0].therapy_type, 'That patient is outside your specialty.');
+      const reasonTherapy = therapyOf(schedule.reason);
+      if (domain != null && reasonTherapy && reasonTherapy !== domain) {
+        throw fail(403, 'That visit is outside your specialty.');
+      }
+      const therapy = domain ?? (reasonTherapy || therapyOf(found.rows[0].therapy_type));
       const doctor = await doctorFor(req.body.doctorId, therapy);
-      if (therapy && !doctor.doctorId) throw fail(400, 'Choose a doctor for this therapy.');
+      if (therapy && !doctor.doctorId) throw fail(400, 'Choose a clinician for this specialty.');
 
       const created = await client.query(
         `
@@ -159,7 +170,7 @@ router.post(
       );
       await client.query('COMMIT');
       const reservation = await findReservation(created.rows[0].id);
-      const overlaps = await overlapsFor(reservation);
+      const overlaps = await overlapsFor(reservation, domain);
       res.status(201).json({ reservation, overlaps });
     } catch (error) {
       await client.query('ROLLBACK');
@@ -203,7 +214,7 @@ router.patch(
       [next.scheduledDate, next.startTime, next.endTime, next.reason, next.notes, next.status, next.amountPaid, req.params.id],
     );
     const reservation = await findReservation(req.params.id);
-    res.json({ reservation, overlaps: await overlapsFor(reservation) });
+    res.json({ reservation, overlaps: await overlapsFor(reservation, await domainOf(req)) });
   }),
 );
 
