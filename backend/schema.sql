@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS instruments, documents, reservations, patients, users;
+DROP TABLE IF EXISTS outcome_payments, instruments, documents, reservations, patients, users;
 
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
@@ -35,7 +35,7 @@ CREATE TABLE reservations (
   start_time TIME NOT NULL,
   end_time TIME NOT NULL,
   reason TEXT,
-  status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'arrived', 'completed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled')),
   notes TEXT,
   doctor_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
   created_by INTEGER REFERENCES users (id) ON DELETE SET NULL,
@@ -63,6 +63,8 @@ CREATE TABLE instruments (
   therapy_type TEXT NOT NULL,
   name TEXT NOT NULL,
   used_for TEXT NOT NULL,
+  price NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (price >= 0),
+  priced_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   file_name TEXT,
   stored_name TEXT,
   mime_type TEXT,
@@ -74,4 +76,16 @@ CREATE INDEX reservations_date_idx ON reservations (scheduled_date, start_time);
 CREATE INDEX reservations_patient_idx ON reservations (patient_id, scheduled_date);
 CREATE INDEX patients_name_idx ON patients (full_name);
 CREATE INDEX documents_name_idx ON documents (name);
+CREATE TABLE outcome_payments (
+  id SERIAL PRIMARY KEY,
+  month TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('salaries', 'rent', 'services')),
+  label TEXT NOT NULL,
+  amount NUMERIC(12, 2) NOT NULL CHECK (amount >= 0),
+  staff_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users (id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX instruments_therapy_idx ON instruments (therapy_type, name);
+CREATE INDEX outcome_payments_month_idx ON outcome_payments (month, category);

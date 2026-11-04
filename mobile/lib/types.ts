@@ -35,7 +35,7 @@ export type Patient = {
   reasons?: string[];
 };
 
-export type VisitStatus = 'scheduled' | 'arrived' | 'completed' | 'cancelled';
+export type VisitStatus = 'scheduled' | 'completed' | 'cancelled';
 
 export type Reservation = {
   id: number;
@@ -68,6 +68,29 @@ export type IncomeCategory = {
   days: IncomeDay[];
 };
 
+export type OutcomeCategoryKey = 'salaries' | 'rent' | 'services' | 'equipment';
+
+export type OutcomeItem = {
+  id: number;
+  label: string;
+  amount: number;
+  staffId?: number | null;
+  therapyType?: string | null;
+};
+
+export type OutcomeCategory = {
+  key: OutcomeCategoryKey;
+  label: string;
+  total: number;
+  items: OutcomeItem[];
+};
+
+export type OutcomeMonth = {
+  month: string;
+  total: number;
+  categories: OutcomeCategory[];
+};
+
 export type IncomeMonth = {
   month: string;
   from: string;
@@ -89,13 +112,14 @@ export type DashboardTherapy = {
   sessions: number;
   completed: number;
   income: number;
+  outcome: number;
 };
 
 export type DashboardReport = {
   totalSessions: number;
   totalIncome: number;
+  totalOutcome: number;
   completed: number;
-  arrived: number;
   scheduled: number;
   cancelled: number;
   therapies: DashboardTherapy[];
@@ -125,6 +149,8 @@ export type Instrument = {
   therapyType: string;
   name: string;
   usedFor: string;
+  price: number;
+  pricedAt?: string;
   fileName: string | null;
   mimeType: string | null;
   hasImage: boolean;

@@ -104,11 +104,17 @@ router.get(
       params.push(patientId);
       clauses.push(`r.patient_id = $${params.length}`);
     }
+    const pending = req.query.pending === '1';
+    if (pending) {
+      params.push(clinicNow());
+      clauses.push(`r.status = 'scheduled'`);
+      clauses.push(`(r.scheduled_date + r.end_time) <= $${params.length}::timestamp`);
+    }
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
-    const { rows } = await pool.query(
-      `${reservationSelect} ${where} ORDER BY r.scheduled_date, r.start_time, r.id`,
-      params,
-    );
+    const order = pending
+      ? 'ORDER BY r.scheduled_date DESC, r.start_time DESC, r.id DESC'
+      : 'ORDER BY r.scheduled_date, r.start_time, r.id';
+    const { rows } = await pool.query(`${reservationSelect} ${where} ${order}`, params);
     res.json({ reservations: rows });
   }),
 );
@@ -118,7 +124,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const schedule = scheduleFrom(req.body);
     const status = req.body.status || 'scheduled';
-    if (!['scheduled', 'arrived', 'completed', 'cancelled'].includes(status)) {
+    if (!['scheduled', 'completed', 'cancelled'].includes(status)) {
       throw fail(400, 'Unknown visit status.');
     }
     if (status !== 'scheduled' && !['admin', 'sub-admin'].includes(req.user.role)) {
@@ -132,6 +138,26 @@ router.post(
       if (!Number.isInteger(patientId)) throw fail(400, 'Choose a registered patient.');
       const found = await client.query('SELECT id, therapy_type FROM patients WHERE id = $1', [patientId]);
       if (!found.rows[0]) throw fail(404, 'Patient not found.');
+      if (req.body.openSlot) {
+        const startMinutes = minutes(schedule.startTime);
+        const endMinutes = minutes(schedule.endTime);
+        if (startMinutes < 7 * 60 || endMinutes > 16 * 60) {
+          throw fail(400, 'Choose a time between 7:00 AM and 4:00 PM.');
+        }
+        const clash = await client.query(
+          `
+          SELECT id FROM reservations
+          WHERE scheduled_date = $1::date
+            AND status <> 'cancelled'
+            AND start_time < $3::time
+            AND end_time > $2::time
+          LIMIT 1
+          `,
+          [schedule.scheduledDate, schedule.startTime, schedule.endTime],
+        );
+        if (clash.rows[0]) throw fail(409, 'That time is already booked.');
+      }
+      const openSlot = Boolean(req.body.openSlot);
       const therapy = therapyOf(schedule.reason) || therapyOf(found.rows[0].therapy_type);
       const doctor = await doctorFor(req.body.doctorId, therapy);
       if (therapy && !doctor.doctorId) throw fail(400, 'Choose a doctor for this therapy.');
@@ -170,28 +196,58 @@ router.post(
   }),
 );
 
+function clinicNow() {
+  const now = new Date();
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
+function sessionEnded(reservation) {
+  const end = new Date(`${reservation.scheduledDate}T${reservation.endTime}`);
+  return !Number.isNaN(end.getTime()) && end.getTime() <= Date.now();
+}
+
 router.patch(
   '/:id',
-  requireRole('admin', 'sub-admin'),
   asyncHandler(async (req, res) => {
     const current = await findReservation(req.params.id);
     if (!current) throw fail(404, 'Visit not found.');
-    const next = {
-      scheduledDate: req.body.scheduledDate ?? current.scheduledDate,
-      startTime: req.body.startTime ?? current.startTime,
-      endTime: req.body.endTime ?? current.endTime,
-      reason: req.body.reason === undefined ? current.reason : text(req.body.reason, 200, 'Reason'),
-      notes: req.body.notes === undefined ? current.notes : text(req.body.notes, 2000, 'Notes'),
-      status: req.body.status ?? current.status,
-      amountPaid: req.body.amountPaid === undefined ? current.amountPaid : money(req.body.amountPaid, 'Amount paid'),
-    };
+    const submitting = req.user.role === 'user';
+    if (submitting) {
+      if (req.body.status !== 'completed') throw fail(403, 'Submit the finished session.');
+      if (current.status !== 'scheduled') {
+        throw fail(400, 'That session is already closed.');
+      }
+      if (!sessionEnded(current)) throw fail(400, 'That session has not finished yet.');
+    } else if (req.user.role !== 'admin' && req.user.role !== 'sub-admin') {
+      throw fail(403, 'Your role cannot do that.');
+    }
+    const next = submitting
+      ? {
+          scheduledDate: current.scheduledDate,
+          startTime: current.startTime,
+          endTime: current.endTime,
+          reason: current.reason,
+          notes: req.body.notes === undefined ? current.notes : text(req.body.notes, 2000, 'Notes'),
+          status: 'completed',
+          amountPaid: current.amountPaid,
+        }
+      : {
+          scheduledDate: req.body.scheduledDate ?? current.scheduledDate,
+          startTime: req.body.startTime ?? current.startTime,
+          endTime: req.body.endTime ?? current.endTime,
+          reason: req.body.reason === undefined ? current.reason : text(req.body.reason, 200, 'Reason'),
+          notes: req.body.notes === undefined ? current.notes : text(req.body.notes, 2000, 'Notes'),
+          status: req.body.status ?? current.status,
+          amountPaid: req.body.amountPaid === undefined ? current.amountPaid : money(req.body.amountPaid, 'Amount paid'),
+        };
     if (!isDate(next.scheduledDate) || !isTime(next.startTime) || !isTime(next.endTime)) {
       throw fail(400, 'Check the date and times.');
     }
     if (minutes(next.endTime) <= minutes(next.startTime)) {
       throw fail(400, 'The visit has to end after it starts.');
     }
-    if (!['scheduled', 'arrived', 'completed', 'cancelled'].includes(next.status)) {
+    if (!['scheduled', 'completed', 'cancelled'].includes(next.status)) {
       throw fail(400, 'Unknown visit status.');
     }
     await pool.query(

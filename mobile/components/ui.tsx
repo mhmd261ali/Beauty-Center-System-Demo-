@@ -12,7 +12,6 @@ export const font = {
 
 export const STATUS: Record<VisitStatus, { label: string; bg: string; fg: string; line: string }> = {
   scheduled: { label: 'Scheduled', bg: '#e5f7f7', fg: '#0f5c5e', line: '#4BBBBC' },
-  arrived: { label: 'Arrived', bg: '#fff3e4', fg: '#8a4e12', line: '#e09a45' },
   completed: { label: 'Completed', bg: '#e7f3f4', fg: '#125e60', line: '#146e70' },
   cancelled: { label: 'Cancelled', bg: '#fdecec', fg: '#9b3b36', line: '#9b3b36' },
 };
@@ -267,6 +266,17 @@ export function TherapyPill({ therapy }: { therapy?: string | null }) {
         {tone.label}
       </Text>
     </View>
+  );
+}
+
+export function FilterIcon({ color }: { color: string }) {
+  if (Platform.OS !== 'web') {
+    return <Text style={[font.medium, { color, fontSize: 16, lineHeight: 18 }]}>▽</Text>;
+  }
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
   );
 }
 

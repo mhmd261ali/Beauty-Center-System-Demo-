@@ -131,7 +131,7 @@ export default function LoginScreen() {
       <View className={wide ? 'w-[46%] justify-between bg-pine px-12 py-16' : 'bg-pine px-6 py-8'} style={wide ? { paddingTop: Math.max(insets.top, 48) } : undefined}>
         <View>
           <Text style={font.medium} className="text-xs uppercase tracking-widest text-sand">
-            Halden Clinic
+            DoubleA Clinic
           </Text>
           <Text style={font.display} className={`text-card ${wide ? 'mt-4 text-6xl' : 'mt-2 text-4xl'}`}>
             Halden

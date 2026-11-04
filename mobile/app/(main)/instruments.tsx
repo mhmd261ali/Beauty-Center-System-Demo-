@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 
@@ -8,9 +8,124 @@ import { Screen } from '../../components/Screen';
 import { Banner, Button, Chip, Field, PageTitle, TherapyPill, confirmAction, font, therapySurface } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { PATIENT_TYPES, WIDE } from '../../lib/format';
-import { canDelete } from '../../lib/permissions';
+import { PATIENT_TYPES, WIDE, formatMoney } from '../../lib/format';
+import { canDelete, canSeeIncome } from '../../lib/permissions';
 import type { Instrument, PickedFile } from '../../lib/types';
+
+function priceOf(value: string) {
+  const amount = Number(value.trim());
+  if (value.trim() === '' || !Number.isFinite(amount) || amount < 0) return null;
+  return Math.round(amount * 100) / 100;
+}
+
+function EditIcon() {
+  if (Platform.OS !== 'web') {
+    return <Text style={[font.medium, { color: '#146e70', fontSize: 14, lineHeight: 16 }]}>✎</Text>;
+  }
+  return (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#146e70" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function InstrumentPrice({
+  item,
+  editable,
+  onChange,
+}: {
+  item: Instrument;
+  editable: boolean;
+  onChange: (next: Instrument) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(item.price == null ? '' : String(item.price));
+  const [busy, setBusy] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(item.price == null ? '' : String(item.price));
+    setEditing(false);
+  }, [item.id, item.price]);
+
+  const entered = priceOf(value);
+  const dirty = entered != null && entered !== Number(item.price);
+
+  async function save() {
+    if (entered == null) {
+      setLocalError('Enter a price.');
+      return;
+    }
+    if (!dirty) {
+      setEditing(false);
+      setLocalError(null);
+      return;
+    }
+    setBusy(true);
+    setLocalError(null);
+    try {
+      const data = await api.updateInstrument(item.id, entered);
+      onChange(data.instrument);
+      setEditing(false);
+    } catch (reason) {
+      setLocalError(reason instanceof Error ? reason.message : 'Could not save the price.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <View className="mt-2 flex-row items-center">
+        <Text style={font.semibold} className="text-sm text-ink">
+          ${formatMoney(item.price)}
+        </Text>
+        {editable ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Edit price"
+            onPress={() => {
+              setValue(item.price == null ? '' : String(item.price));
+              setLocalError(null);
+              setEditing(true);
+            }}
+            className="ml-2 h-7 w-7 items-center justify-center rounded-full"
+          >
+            <EditIcon />
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  }
+
+  return (
+    <View className="mt-2">
+      <View className="flex-row items-center">
+        <TextInput
+          value={value}
+          onChangeText={setValue}
+          keyboardType="decimal-pad"
+          placeholder="0"
+          placeholderTextColor="#7a9495"
+          autoFocus
+          className="mr-2 h-10 flex-1 rounded-xl border border-line bg-card px-3 text-base text-ink"
+          style={font.sans}
+        />
+        <Pressable accessibilityRole="button" onPress={() => void save()} className="rounded-full bg-clay px-3 py-2">
+          <Text style={font.medium} className="text-xs text-card">
+            {busy ? 'Saving…' : 'Save'}
+          </Text>
+        </Pressable>
+      </View>
+      {localError ? (
+        <Text style={[font.sans, { color: '#9b3b36' }]} className="mt-1 text-xs">
+          {localError}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
 
 export default function InstrumentsScreen() {
   const { user } = useAuth();
@@ -20,6 +135,7 @@ export default function InstrumentsScreen() {
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
+  const [price, setPrice] = useState('');
   const [usedFor, setUsedFor] = useState('');
   const [formTherapy, setFormTherapy] = useState<string | null>(null);
   const [image, setImage] = useState<PickedFile | null>(null);
@@ -27,6 +143,8 @@ export default function InstrumentsScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const remove = user ? canDelete(user.role) : false;
+  const editPrice = user ? canSeeIncome(user.role) : false;
+  const enteredPrice = priceOf(price);
 
   const load = useCallback(async () => {
     try {
@@ -61,6 +179,7 @@ export default function InstrumentsScreen() {
     setAdding(true);
     setFormTherapy(therapy);
     setName('');
+    setPrice('');
     setUsedFor('');
     setImage(null);
     setError(null);
@@ -70,6 +189,7 @@ export default function InstrumentsScreen() {
   function cancelAdd() {
     setAdding(false);
     setName('');
+    setPrice('');
     setUsedFor('');
     setImage(null);
     setFormTherapy(null);
@@ -105,6 +225,10 @@ export default function InstrumentsScreen() {
       setError('Say what the instrument is used for.');
       return;
     }
+    if (enteredPrice == null) {
+      setError('Enter the price.');
+      return;
+    }
     if (!image) {
       setError('Add a photo of the instrument.');
       return;
@@ -117,6 +241,7 @@ export default function InstrumentsScreen() {
         name: name.trim(),
         usedFor: usedFor.trim(),
         therapyType: formTherapy,
+        price: enteredPrice,
         image,
       });
       setMessage(`Added ${name.trim()}.`);
@@ -159,6 +284,7 @@ export default function InstrumentsScreen() {
         </Text>
       )}
       <Field label="Name" value={name} onChangeText={setName} placeholder="Gait belt" />
+      <Field label="Price" value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholder="0" />
       <Field
         label="Used for"
         value={usedFor}
@@ -175,7 +301,7 @@ export default function InstrumentsScreen() {
         <View className="mr-3 flex-1">
           <Button
             label={busy ? 'Adding…' : 'Save instrument'}
-            disabled={busy || !formTherapy || !name.trim() || !usedFor.trim() || !image}
+            disabled={busy || !formTherapy || !name.trim() || !usedFor.trim() || enteredPrice == null || !image}
             onPress={() => void submit()}
           />
         </View>
@@ -190,7 +316,7 @@ export default function InstrumentsScreen() {
     <Screen>
       <View className="flex-row items-start justify-between">
         <View className="mr-4 flex-1">
-          <PageTitle kicker="Clinic" title="Instruments" detail="Each therapy keeps the tools it uses, with a photo and what they are for." />
+          <PageTitle kicker="Clinic" title="Instruments" detail="Each therapy keeps the tools it uses. The price is counted as outcome, apart from visit income." />
         </View>
         {adding ? null : (
           <Pressable accessibilityRole="button" onPress={beginAdd} className="mt-1 rounded-full bg-clay px-3 py-2">
@@ -238,6 +364,11 @@ export default function InstrumentsScreen() {
                       <Text style={font.sans} className="mt-1 text-sm leading-5 text-mute">
                         {item.usedFor}
                       </Text>
+                      <InstrumentPrice
+                        item={item}
+                        editable={editPrice}
+                        onChange={(next) => setInstruments((current) => current.map((row) => (row.id === next.id ? next : row)))}
+                      />
                       {remove ? (
                         <Pressable accessibilityRole="button" onPress={() => void removeInstrument(item)} className="mt-2 self-start">
                           <Text style={font.medium} className="text-xs text-moss">

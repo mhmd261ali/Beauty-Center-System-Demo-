@@ -5,7 +5,7 @@ const multer = require('multer');
 
 const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
-const { asyncHandler, fail, text } = require('../http');
+const { asyncHandler, fail, money, text } = require('../http');
 const { THERAPY_SET } = require('../care');
 const { uploadsDir } = require('../paths');
 
@@ -40,6 +40,8 @@ const instrumentSelect = `
     i.therapy_type AS "therapyType",
     i.name,
     i.used_for AS "usedFor",
+    i.price::float8 AS price,
+    i.priced_at AS "pricedAt",
     i.file_name AS "fileName",
     i.stored_name AS "storedName",
     i.mime_type AS "mimeType",
@@ -87,17 +89,19 @@ router.post(
     const name = text(req.body.name, 160, 'Name');
     const usedFor = text(req.body.usedFor, 2000, 'Used for');
     const therapyType = text(req.body.therapyType, 80, 'Therapy');
+    const price = money(req.body.price, 'Price');
     if (!therapyType || !THERAPY_SET.has(therapyType)) throw fail(400, 'Choose a therapy type.');
     if (!name) throw fail(400, 'Name the instrument.');
     if (!usedFor) throw fail(400, 'Say what the instrument is used for.');
+    if (price == null) throw fail(400, 'Enter the price.');
     if (!req.file) throw fail(400, 'Add a photo of the instrument.');
     const { rows } = await pool.query(
       `
-      INSERT INTO instruments (therapy_type, name, used_for, file_name, stored_name, mime_type, added_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO instruments (therapy_type, name, used_for, price, priced_at, file_name, stored_name, mime_type, added_by)
+      VALUES ($1, $2, $3, $4, now(), $5, $6, $7, $8)
       RETURNING id
       `,
-      [therapyType, name, usedFor, req.file.originalname, req.file.filename, req.file.mimetype, req.user.id],
+      [therapyType, name, usedFor, price, req.file.originalname, req.file.filename, req.file.mimetype, req.user.id],
     );
     const created = await pool.query(`${instrumentSelect} WHERE i.id = $1`, [rows[0].id]);
     res.status(201).json({ instrument: publicInstrument(created.rows[0]) });
@@ -118,6 +122,27 @@ router.get(
     if (!fs.existsSync(full)) throw fail(404, 'The photo is missing from the server.');
     res.type(row.mime_type || 'image/jpeg');
     res.sendFile(full);
+  }),
+);
+
+router.patch(
+  '/:id',
+  requireRole('admin'),
+  asyncHandler(async (req, res) => {
+    const price = money(req.body.price, 'Price');
+    if (price == null) throw fail(400, 'Enter the price.');
+    const { rows } = await pool.query(
+      `
+      UPDATE instruments
+      SET price = $1, priced_at = now()
+      WHERE id = $2
+      RETURNING id
+      `,
+      [price, req.params.id],
+    );
+    if (!rows[0]) throw fail(404, 'Instrument not found.');
+    const updated = await pool.query(`${instrumentSelect} WHERE i.id = $1`, [rows[0].id]);
+    res.json({ instrument: publicInstrument(updated.rows[0]) });
   }),
 );
 

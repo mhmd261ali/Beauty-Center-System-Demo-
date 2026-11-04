@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import type { DashboardReport, Doctor, DocumentRow, IncomeMonth, Instrument, Patient, PickedFile, Reservation, User, VisitStatus } from './types';
+import type { DashboardReport, Doctor, DocumentRow, IncomeMonth, Instrument, OutcomeCategoryKey, OutcomeMonth, Patient, PickedFile, Reservation, User, VisitStatus } from './types';
 
 const TOKEN_KEY = 'halden.token';
 
@@ -92,12 +92,13 @@ export const api = {
   deletePatient(id: number) {
     return request<{ ok: true }>(`/api/patients/${id}`, { method: 'DELETE' });
   },
-  reservations(query: { date?: string; from?: string; to?: string; patientId?: number }) {
+  reservations(query: { date?: string; from?: string; to?: string; patientId?: number; pending?: boolean }) {
     const params = new URLSearchParams();
     if (query.date) params.set('date', query.date);
     if (query.from) params.set('from', query.from);
     if (query.to) params.set('to', query.to);
     if (query.patientId) params.set('patientId', String(query.patientId));
+    if (query.pending) params.set('pending', '1');
     return request<{ reservations: Reservation[] }>(`/api/reservations?${params.toString()}`);
   },
   createReservation(body: Record<string, unknown>) {
@@ -118,6 +119,20 @@ export const api = {
   income(month: string) {
     const params = new URLSearchParams({ month });
     return request<IncomeMonth>(`/api/income?${params.toString()}`);
+  },
+  outcome(month: string) {
+    const params = new URLSearchParams({ month });
+    return request<OutcomeMonth>(`/api/outcome?${params.toString()}`);
+  },
+  createOutcome(body: {
+    month: string;
+    payments: { category: Exclude<OutcomeCategoryKey, 'equipment'>; label?: string; staffId?: number; amount: number }[];
+  }) {
+    return request<OutcomeMonth>('/api/outcome', { method: 'POST', body: JSON.stringify(body) });
+  },
+  deleteOutcome(id: number, month: string) {
+    const params = new URLSearchParams({ month });
+    return request<OutcomeMonth>(`/api/outcome/${id}?${params.toString()}`, { method: 'DELETE' });
   },
   dashboard(month: string) {
     const params = new URLSearchParams({ month });
@@ -175,11 +190,12 @@ export const api = {
     const query = params.toString();
     return request<{ instruments: Instrument[] }>(`/api/instruments${query ? `?${query}` : ''}`);
   },
-  createInstrument(input: { name: string; usedFor: string; therapyType: string; image: PickedFile }) {
+  createInstrument(input: { name: string; usedFor: string; therapyType: string; price: number; image: PickedFile }) {
     const body = new FormData();
     body.append('name', input.name);
     body.append('usedFor', input.usedFor);
     body.append('therapyType', input.therapyType);
+    body.append('price', String(input.price));
     if (Platform.OS === 'web' && input.image.file) {
       body.append('image', input.image.file);
     } else {
@@ -191,7 +207,26 @@ export const api = {
     }
     return request<{ instrument: Instrument }>('/api/instruments', { method: 'POST', body });
   },
+  updateInstrument(id: number, price: number) {
+    return request<{ instrument: Instrument }>(`/api/instruments/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ price }),
+    });
+  },
   deleteInstrument(id: number) {
     return request<{ ok: true }>(`/api/instruments/${id}`, { method: 'DELETE' });
+  },
+  settings() {
+    return request<{
+      settings: { mode: 'before' | 'tomorrow'; reminderHours: number; reminderTime: string };
+      choices: number[];
+      times: string[];
+    }>('/api/settings');
+  },
+  updateSettings(body: { mode: 'before' | 'tomorrow'; reminderHours: number; reminderTime: string }) {
+    return request<{ settings: { mode: 'before' | 'tomorrow'; reminderHours: number; reminderTime: string } }>('/api/settings', {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
   },
 };

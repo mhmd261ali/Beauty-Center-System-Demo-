@@ -6,7 +6,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { PatientSearch } from '../../components/PatientSearch';
 import { Screen } from '../../components/Screen';
 import { StaffSearch } from '../../components/StaffSearch';
-import { Banner, Button, Chip, DateField, Field, PageTitle, TherapyPill, confirmAction, font, therapySurface } from '../../components/ui';
+import { Banner, Button, Chip, DateField, Field, FilterIcon, PageTitle, TherapyPill, confirmAction, font, therapySurface } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { downloadDocument } from '../../lib/files';
@@ -276,16 +276,7 @@ export default function DocumentsScreen() {
         <View className="mr-4 flex-1">
           <PageTitle kicker="Files" title="Documents" detail="Search and filter by patient, who added it, therapy, or date." />
         </View>
-        <View className="mt-1 flex-row">
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setFiltering(true)}
-            className={`mr-2 rounded-full px-3 py-2 ${filtersOn ? 'bg-pine' : 'border border-line bg-card'}`}
-          >
-            <Text style={font.medium} className={`text-sm ${filtersOn ? 'text-card' : 'text-ink'}`}>
-              {filtersOn ? 'Filters on' : 'Filter'}
-            </Text>
-          </Pressable>
+        <View className="mt-1 items-end">
           {upload ? (
             <Pressable accessibilityRole="button" onPress={beginAdd} className="rounded-full bg-clay px-3 py-2">
               <Text style={font.medium} className="text-sm text-card">
@@ -293,6 +284,14 @@ export default function DocumentsScreen() {
               </Text>
             </Pressable>
           ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Filter"
+            onPress={() => setFiltering(true)}
+            className={`mt-2 h-10 w-10 items-center justify-center rounded-full ${filtersOn ? 'bg-pine' : 'border border-line bg-card'}`}
+          >
+            <FilterIcon color={filtersOn ? '#ffffff' : '#0f5c5e'} />
+          </Pressable>
         </View>
       </View>
       {message ? <Banner tone="ok">{message}</Banner> : null}

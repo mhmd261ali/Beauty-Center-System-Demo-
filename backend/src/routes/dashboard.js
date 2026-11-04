@@ -25,6 +25,11 @@ function currentMonth() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function monthInstants(month) {
+  const [year, part] = month.split('-').map(Number);
+  return [new Date(year, part - 1, 1).toISOString(), new Date(year, part, 1).toISOString()];
+}
+
 router.get(
   '/',
   asyncHandler(async (req, res) => {
@@ -32,8 +37,9 @@ router.get(
     if (!MONTH.test(month)) throw fail(400, 'Choose a month.');
     const { from, to } = monthBounds(month);
     const range = [from, to];
+    const priced = monthInstants(month);
 
-    const [therapyResult, incomeResult, therapistResult, patientResult, cancelledResult] = await Promise.all([
+    const [therapyResult, incomeResult, outcomeResult, paymentResult, therapistResult, patientResult, cancelledResult] = await Promise.all([
       pool.query(
         `
         SELECT
@@ -63,6 +69,20 @@ router.get(
         GROUP BY 1
         `,
         range,
+      ),
+      pool.query(
+        `
+        SELECT i.therapy_type AS therapy, COALESCE(SUM(i.price), 0)::float8 AS outcome
+        FROM instruments i
+        WHERE i.priced_at >= $1::timestamptz
+          AND i.priced_at < $2::timestamptz
+        GROUP BY 1
+        `,
+        priced,
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(amount), 0)::float8 AS total FROM outcome_payments WHERE month = $1`,
+        [month],
       ),
       pool.query(
         `
@@ -101,7 +121,6 @@ router.get(
         `
         SELECT
           COUNT(*) FILTER (WHERE status = 'completed')::int AS completed,
-          COUNT(*) FILTER (WHERE status = 'arrived')::int AS arrived,
           COUNT(*) FILTER (WHERE status = 'scheduled')::int AS scheduled,
           COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled
         FROM reservations
@@ -115,29 +134,40 @@ router.get(
     const sessionMap = new Map(therapyResult.rows.map((row) => [row.therapy, Number(row.sessions) || 0]));
     const completedMap = new Map(therapyResult.rows.map((row) => [row.therapy, Number(row.completed) || 0]));
     const incomeMap = new Map(incomeResult.rows.map((row) => [row.therapy, Number(row.income) || 0]));
+    const outcomeMap = new Map(outcomeResult.rows.map((row) => [row.therapy, Number(row.outcome) || 0]));
 
     const therapies = THERAPIES.map((name) => ({
       name,
       sessions: sessionMap.get(name) ?? 0,
       completed: completedMap.get(name) ?? 0,
       income: incomeMap.get(name) ?? 0,
+      outcome: outcomeMap.get(name) ?? 0,
     }));
 
     const known = new Set(THERAPIES);
     const leftoverSessions = [...sessionMap.entries()].reduce((sum, [name, count]) => (known.has(name) ? sum : sum + count), 0);
     const leftoverCompleted = [...completedMap.entries()].reduce((sum, [name, count]) => (known.has(name) ? sum : sum + count), 0);
     const leftoverIncome = [...incomeMap.entries()].reduce((sum, [name, amount]) => (known.has(name) ? sum : sum + amount), 0);
-    if (leftoverSessions || leftoverIncome) {
-      therapies.push({ name: 'Unassigned', sessions: leftoverSessions, completed: leftoverCompleted, income: leftoverIncome });
+    const leftoverOutcome = [...outcomeMap.entries()].reduce((sum, [name, amount]) => (known.has(name) ? sum : sum + amount), 0);
+    if (leftoverSessions || leftoverIncome || leftoverOutcome) {
+      therapies.push({
+        name: 'Unassigned',
+        sessions: leftoverSessions,
+        completed: leftoverCompleted,
+        income: leftoverIncome,
+        outcome: leftoverOutcome,
+      });
     }
 
     const totalSessions = therapies.reduce((sum, item) => sum + item.sessions, 0);
     const totalIncome = therapies.reduce((sum, item) => sum + item.income, 0);
+    const totalOutcome = therapies.reduce((sum, item) => sum + item.outcome, 0) + (Number(paymentResult.rows[0]?.total) || 0);
 
     const statusRow = cancelledResult.rows[0] ?? {};
     res.json({
       totalSessions,
       totalIncome,
+      totalOutcome,
       completed: statusRow.completed ?? 0,
       arrived: statusRow.arrived ?? 0,
       scheduled: statusRow.scheduled ?? 0,

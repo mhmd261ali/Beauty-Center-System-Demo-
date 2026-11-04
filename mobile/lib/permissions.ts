@@ -16,6 +16,10 @@ export function canManageStaff(role: Role) {
   return role === 'admin';
 }
 
+export function canManageSettings(role: Role) {
+  return role === 'admin';
+}
+
 export function canSeeIncome(role: Role) {
   return role === 'admin';
 }

@@ -37,11 +37,11 @@ const PANEL =
       } as const)
     : { backgroundColor: '#ffffff', borderRadius: 24, borderWidth: 1, borderColor: '#c9e4e4' };
 
-type IconName = 'calendar' | 'close' | 'people' | 'cash' | 'users' | 'check' | 'progress' | 'clock';
+type IconName = 'calendar' | 'close' | 'people' | 'cash' | 'outcome' | 'users' | 'check' | 'progress' | 'clock';
 
 function DashIcon({ name, color }: { name: IconName; color: string }) {
   if (Platform.OS !== 'web') {
-    const mark = name === 'calendar' ? '◷' : name === 'close' ? '✕' : name === 'cash' ? '$' : name === 'check' ? '✓' : name === 'clock' ? '◷' : '☺';
+    const mark = name === 'calendar' ? '◷' : name === 'close' ? '✕' : name === 'cash' ? '$' : name === 'outcome' ? '↓' : name === 'check' ? '✓' : name === 'clock' ? '◷' : '☺';
     return (
       <Text style={[font.medium, { color, fontSize: 18, lineHeight: 22 }]}>{mark}</Text>
     );
@@ -90,6 +90,15 @@ function DashIcon({ name, color }: { name: IconName; color: string }) {
       <svg {...common}>
         <line x1="12" y1="1" x2="12" y2="23" />
         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    );
+  }
+  if (name === 'outcome') {
+    return (
+      <svg {...common}>
+        <line x1="12" y1="3" x2="12" y2="16" />
+        <polyline points="7 11 12 16 17 11" />
+        <line x1="5" y1="21" x2="19" y2="21" />
       </svg>
     );
   }
@@ -236,7 +245,6 @@ export default function DashboardScreen() {
 
   const totalSessions = report?.totalSessions ?? 0;
   const completed = report?.completed ?? 0;
-  const arrived = report?.arrived ?? 0;
   const scheduled = report?.scheduled ?? 0;
   const cancelled = report?.cancelled ?? 0;
   const therapists = report?.therapists ?? [];
@@ -275,25 +283,38 @@ export default function DashboardScreen() {
       icon: 'people' as const,
       iconColor: '#e07a6a',
     },
-    showIncome
-      ? {
-          label: 'Income',
-          value: dollars(report?.totalIncome ?? 0),
-          hint: 'Recorded payments',
-          hintColor: '#c4921a',
-          tint: '#fbf6e0',
-          icon: 'cash' as const,
-          iconColor: '#c4921a',
-        }
-      : {
-          label: 'Therapists',
-          value: String(therapists.length),
-          hint: 'On the desk',
-          hintColor: '#0f5c5e',
-          tint: '#e7f3f4',
-          icon: 'users' as const,
-          iconColor: '#0f5c5e',
-        },
+    ...(showIncome
+      ? [
+          {
+            label: 'Income',
+            value: dollars(report?.totalIncome ?? 0),
+            hint: 'Recorded payments',
+            hintColor: '#c4921a',
+            tint: '#fbf6e0',
+            icon: 'cash' as const,
+            iconColor: '#c4921a',
+          },
+          {
+            label: 'Outcome',
+            value: dollars(report?.totalOutcome ?? 0),
+            hint: 'Salaries, rent, services, equipment',
+            hintColor: '#9b3b36',
+            tint: '#f8eceb',
+            icon: 'outcome' as const,
+            iconColor: '#9b3b36',
+          },
+        ]
+      : [
+          {
+            label: 'Therapists',
+            value: String(therapists.length),
+            hint: 'On the desk',
+            hintColor: '#0f5c5e',
+            tint: '#e7f3f4',
+            icon: 'users' as const,
+            iconColor: '#0f5c5e',
+          },
+        ]),
   ];
 
   return (
@@ -328,9 +349,9 @@ export default function DashboardScreen() {
       </View>
       {error ? <Banner tone="error">{error}</Banner> : null}
 
-      <View className="mb-5 flex-row" style={{ marginHorizontal: -8 }}>
+      <View className="mb-5 flex-row flex-wrap" style={{ marginHorizontal: -8 }}>
         {stats.map((card) => (
-          <View key={card.label} className="flex-1" style={{ paddingHorizontal: 8 }}>
+          <View key={card.label} style={{ paddingHorizontal: 8, paddingBottom: 16, flexGrow: 1, flexBasis: wide ? (showIncome ? '18%' : '22%') : '46%', minWidth: 150 }}>
             <StatCard {...card} />
           </View>
         ))}
@@ -355,9 +376,14 @@ export default function DashboardScreen() {
                 Status
               </Text>
               {showIncome ? (
-                <Text style={font.medium} className="w-20 text-right text-xs uppercase tracking-wide text-mute">
-                  Income
-                </Text>
+                <>
+                  <Text style={font.medium} className="w-20 text-right text-xs uppercase tracking-wide text-mute">
+                    Income
+                  </Text>
+                  <Text style={font.medium} className="w-24 text-right text-xs uppercase tracking-wide text-mute">
+                    Outcome
+                  </Text>
+                </>
               ) : (
                 <Text style={font.medium} className="w-16 text-right text-xs uppercase tracking-wide text-mute">
                   Sessions
@@ -385,7 +411,7 @@ export default function DashboardScreen() {
                       </Text>
                       <Text style={font.sans} className="mt-0.5 text-xs text-mute">
                         {therapy.sessions} {therapy.sessions === 1 ? 'session' : 'sessions'}
-                        {showIncome ? ` · ${dollars(therapy.income)}` : ''}
+                        {showIncome ? ` · income ${dollars(therapy.income)} · outcome ${dollars(therapy.outcome)}` : ''}
                       </Text>
                     </View>
                     {pill}
@@ -408,9 +434,20 @@ export default function DashboardScreen() {
                   <Bar value={share} color={tone.mark} />
                 </View>
                 <View className="w-24">{pill}</View>
-                <Text style={[font.semibold, { fontVariant: ['tabular-nums'] }]} className="w-20 text-right text-sm text-ink">
-                  {showIncome ? dollars(therapy.income) : String(therapy.sessions)}
-                </Text>
+                {showIncome ? (
+                  <>
+                    <Text style={[font.semibold, { fontVariant: ['tabular-nums'] }]} className="w-20 text-right text-sm text-ink">
+                      {dollars(therapy.income)}
+                    </Text>
+                    <Text style={[font.semibold, { fontVariant: ['tabular-nums'], color: '#9b3b36' }]} className="w-24 text-right text-sm">
+                      {dollars(therapy.outcome)}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={[font.semibold, { fontVariant: ['tabular-nums'] }]} className="w-16 text-right text-sm text-ink">
+                    {String(therapy.sessions)}
+                  </Text>
+                )}
               </View>
             );
           })}
@@ -445,9 +482,6 @@ export default function DashboardScreen() {
             <View className="flex-row" style={{ marginHorizontal: -4 }}>
               <View className="flex-1" style={{ paddingHorizontal: 4 }}>
                 <MixChip label="Completed" value={completed} color="#22a06b" icon="check" />
-              </View>
-              <View className="flex-1" style={{ paddingHorizontal: 4 }}>
-                <MixChip label="In clinic" value={arrived} color="#2eb5c0" icon="progress" />
               </View>
               <View className="flex-1" style={{ paddingHorizontal: 4 }}>
                 <MixChip label="Upcoming" value={scheduled} color="#e07a45" icon="clock" />

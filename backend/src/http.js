@@ -14,7 +14,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ROLES = ['admin', 'sub-admin', 'user'];
-const STATUSES = ['scheduled', 'arrived', 'completed', 'cancelled'];
+const STATUSES = ['scheduled', 'completed', 'cancelled'];
 
 function isDate(value) {
   return DATE.test(value || '');

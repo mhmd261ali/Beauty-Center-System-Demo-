@@ -43,7 +43,7 @@ const visits = [
   [-3, '16:00', '16:20', 'Elena Varga', 'Acute headache', 'completed', 'Resolved with usual rescue dose.'],
   [-1, '09:00', '09:20', 'Marcus Webb', 'Wound check', 'completed', 'Edges closed. No redness.'],
   [0, '08:30', '09:00', 'Amira Hassan', 'Blood pressure review', 'completed', '120/78. Continue the current dose.'],
-  [0, '09:15', '09:45', 'Jonah Ellis', 'Hypertension follow-up', 'arrived', 'Waiting on this morning\'s reading.'],
+  [0, '09:15', '09:45', 'Jonah Ellis', 'Hypertension follow-up', 'scheduled', 'Waiting on this morning\'s reading.'],
   [0, '10:00', '10:45', 'Priya Raman', 'New patient intake', 'scheduled', 'Bring the referral letter.'],
   [0, '11:00', '11:40', 'Luis Ortega', 'Diabetes review', 'scheduled', 'Fasting sample already in the tray.'],
   [0, '13:00', '13:25', 'Hanae Suzuki', 'Knee assessment', 'scheduled', 'Swelling after Tuesday\'s match.'],
@@ -169,7 +169,7 @@ async function runSetup() {
     await seedInstruments((text, params) => client.query(text, params), adminId, uploadsDir);
 
     await client.query('COMMIT');
-    console.log('Halden demo desk is ready.');
+    console.log('DoubleA demo desk is ready.');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

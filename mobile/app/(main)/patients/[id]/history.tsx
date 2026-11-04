@@ -28,7 +28,7 @@ export default function PatientHistoryScreen() {
       setVisits(history.reservations);
       setHistory(
         history.reservations
-          .filter((visit) => !(visit.scheduledDate >= today && (visit.status === 'scheduled' || visit.status === 'arrived')))
+          .filter((visit) => !(visit.scheduledDate >= today && visit.status === 'scheduled'))
           .sort((left, right) => right.scheduledDate.localeCompare(left.scheduledDate) || right.startTime.localeCompare(left.startTime)),
       );
     } catch (reason) {

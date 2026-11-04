@@ -202,7 +202,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
     doctorChoice !== doctorId ||
     typeChoice !== patientType ||
     allottedDirty;
-  const upcoming = visits.filter((visit) => visit.scheduledDate >= today && (visit.status === 'scheduled' || visit.status === 'arrived'));
+  const upcoming = visits.filter((visit) => visit.scheduledDate >= today && visit.status === 'scheduled');
   const history = visits
     .filter((visit) => !upcoming.some((item) => item.id === visit.id))
     .sort((left, right) => right.scheduledDate.localeCompare(left.scheduledDate) || right.startTime.localeCompare(left.startTime));
@@ -418,7 +418,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
               <Field label="Session note" value={sessionNotes} onChangeText={setSessionNotes} multiline placeholder="What was covered" />
               {editable ? (
                 <View className="flex-row flex-wrap">
-                  {(['scheduled', 'arrived', 'completed', 'cancelled'] as VisitStatus[]).map((item) => (
+                  {(['scheduled', 'completed', 'cancelled'] as VisitStatus[]).map((item) => (
                     <Chip key={item} label={item} active={status === item} onPress={() => setStatus(item)} />
                   ))}
                 </View>

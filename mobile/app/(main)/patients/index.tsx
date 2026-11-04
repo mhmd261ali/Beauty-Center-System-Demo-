@@ -3,7 +3,7 @@ import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { Screen } from '../../../components/Screen';
-import { Banner, Chip, DateField, Field, PageTitle, TherapyPill, font, therapySurface } from '../../../components/ui';
+import { Banner, Chip, DateField, Field, FilterIcon, PageTitle, TherapyPill, font, therapySurface } from '../../../components/ui';
 import { api } from '../../../lib/api';
 import { GENDERS, PATIENT_TYPES, PAYER_TYPES, WIDE, addDays, hasSessionQuota, sessionQuotaLabel, todayISO } from '../../../lib/format';
 import type { Patient } from '../../../lib/types';
@@ -33,6 +33,7 @@ export default function PatientsScreen() {
   const [gender, setGender] = useState('All');
   const [sort, setSort] = useState<SortId>('name-asc');
   const [nextDate, setNextDate] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const today = todayISO();
   const tomorrow = addDays(today, 1);
@@ -171,15 +172,27 @@ export default function PatientsScreen() {
             detail={`${visible.length} ${visible.length === 1 ? 'patient' : 'patients'}`}
           />
         </View>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/patients/new')}
-          className="mt-1 rounded-full bg-clay px-3 py-2"
-        >
-          <Text style={font.medium} className="text-sm text-card">
-            Add patient
-          </Text>
-        </Pressable>
+        <View className="mt-1 items-end">
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/patients/new')}
+            className="rounded-full bg-clay px-3 py-2"
+          >
+            <Text style={font.medium} className="text-sm text-card">
+              Add patient
+            </Text>
+          </Pressable>
+          {wide ? null : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Filter"
+              onPress={() => setFiltersOpen((open) => !open)}
+              className={`mt-2 h-10 w-10 items-center justify-center rounded-full ${filtersOpen ? 'bg-pine' : 'border border-line bg-card'}`}
+            >
+              <FilterIcon color={filtersOpen ? '#ffffff' : '#0f5c5e'} />
+            </Pressable>
+          )}
+        </View>
       </View>
       {error ? <Banner tone="error">{error}</Banner> : null}
       {wide ? (
@@ -189,7 +202,7 @@ export default function PatientsScreen() {
         </View>
       ) : (
         <View>
-          {filters}
+          {filtersOpen ? filters : null}
           {list}
         </View>
       )}

@@ -61,9 +61,6 @@ function patientInput(body, { requireName }) {
   if (gender && gender !== 'Male' && gender !== 'Female') {
     throw fail(400, 'Choose male or female.');
   }
-  if (requireName && !gender) {
-    throw fail(400, 'Choose male or female.');
-  }
   const patientType = text(body.patientType, 40, 'Patient type') || 'Private';
   if (!['Private', 'Company', 'Islamic'].includes(patientType)) {
     throw fail(400, 'Choose private, company, or islamic.');
@@ -108,7 +105,7 @@ router.get(
         SELECT to_char(r.scheduled_date, 'YYYY-MM-DD') || ' · ' || to_char(r.start_time, 'HH24:MI') AS visit
         FROM reservations r
         WHERE r.patient_id = p.id
-          AND r.status IN ('scheduled', 'arrived')
+          AND r.status = 'scheduled'
           AND r.scheduled_date >= COALESCE($2::date, CURRENT_DATE)
         ORDER BY r.scheduled_date, r.start_time
         LIMIT 1
