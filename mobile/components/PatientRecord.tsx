@@ -244,6 +244,15 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
           <Text style={font.sans} className="mt-1 text-base text-mute">
             {[patient.phone, patient.email].filter(Boolean).join(' · ') || 'No phone or email'}
           </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push(`/documents/patient/${patientId}`)}
+            className="mt-4 self-start rounded-full bg-pine px-4 py-2"
+          >
+            <Text style={font.medium} className="text-sm text-card">
+              See documents
+            </Text>
+          </Pressable>
 
           <View className="mt-5 rounded-2xl border p-4" style={therapySurface(therapy)}>
             <View className="mb-2 flex-row items-center justify-between">

@@ -1,9 +1,13 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 
 const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
 const { asyncHandler, fail, isDate, text, localToday, wholeNumber } = require('../http');
 const { THERAPY_SET, doctorFor } = require('../care');
+const { uploadsDir } = require('../paths');
+const { REPORT_PREFIX, writePatientReport } = require('../reports');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -117,6 +121,72 @@ router.get(
       [pattern, today],
     );
     res.json({ patients: rows });
+  }),
+);
+
+router.post(
+  '/:id/report',
+  requireRole('admin', 'sub-admin'),
+  asyncHandler(async (req, res) => {
+    const patientId = Number(req.params.id);
+    if (!Number.isInteger(patientId)) throw fail(400, 'Unknown patient.');
+    const found = await pool.query(`SELECT ${patientColumns} FROM patients p WHERE p.id = $1`, [patientId]);
+    const patient = found.rows[0];
+    if (!patient) throw fail(404, 'Patient not found.');
+    const [visits, documents] = await Promise.all([
+      pool.query(
+        `
+        SELECT
+          to_char(r.scheduled_date, 'YYYY-MM-DD') AS date,
+          to_char(r.start_time, 'HH24:MI') AS start,
+          to_char(r.end_time, 'HH24:MI') AS end,
+          r.status,
+          r.reason,
+          r.notes,
+          doc.name AS "doctorName"
+        FROM reservations r
+        LEFT JOIN users doc ON doc.id = r.doctor_id
+        WHERE r.patient_id = $1
+        ORDER BY r.scheduled_date, r.start_time
+        `,
+        [patientId],
+      ),
+      pool.query(
+        `
+        SELECT
+          d.name,
+          d.description,
+          d.patient_id AS "patientId",
+          d.file_name AS "fileName",
+          d.stored_name AS "storedName",
+          d.mime_type AS "mimeType",
+          to_char(d.created_at AT TIME ZONE 'Asia/Beirut', 'YYYY-MM-DD') AS "createdDate"
+        FROM documents d
+        WHERE d.patient_id = $1 AND d.stored_name IS NOT NULL
+        ORDER BY d.created_at
+        `,
+        [patientId],
+      ),
+    ]);
+    const written = await writePatientReport({ patient, visits: visits.rows, documents: documents.rows });
+    const storedName = `${Date.now()}-ai-report.txt`;
+    fs.writeFileSync(path.join(uploadsDir, storedName), written.report);
+    const title = `${REPORT_PREFIX} ${new Date().toISOString().slice(0, 10)}`;
+    await pool.query(
+      `
+      INSERT INTO documents (name, description, patient_id, file_name, stored_name, mime_type, uploaded_by)
+      VALUES ($1, $2, $3, $4, $5, 'text/plain', $6)
+      `,
+      [
+        title,
+        'Generated from this patient’s chart, sessions, and documents. Review before clinical use.',
+        patientId,
+        `${title}.txt`,
+        storedName,
+        req.user.id,
+      ],
+    );
+    res.status(201).json({ name: title, read: written.read, skipped: written.skipped.length });
   }),
 );
 

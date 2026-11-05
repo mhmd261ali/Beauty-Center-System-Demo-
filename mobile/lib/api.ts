@@ -138,10 +138,22 @@ export const api = {
     const params = new URLSearchParams({ month });
     return request<DashboardReport>(`/api/dashboard?${params.toString()}`);
   },
-  documents(q: string) {
+  documents(query: { q?: string; patientId?: number; staffId?: number; archive?: boolean } = {}) {
     const params = new URLSearchParams();
-    if (q.trim()) params.set('q', q.trim());
+    if (query.q?.trim()) params.set('q', query.q.trim());
+    if (query.patientId) params.set('patientId', String(query.patientId));
+    if (query.staffId) params.set('staffId', String(query.staffId));
+    if (query.archive) params.set('archive', '1');
     return request<{ documents: DocumentRow[] }>(`/api/documents?${params.toString()}`);
+  },
+  documentPeople() {
+    return request<{
+      patients: { id: number; fullName: string; therapyType: string | null; documents: number }[];
+      staff: { id: number; name: string; therapyType: string | null; documents: number }[];
+    }>('/api/documents/people');
+  },
+  generateReport(patientId: number) {
+    return request<{ name: string; read: number; skipped: number }>(`/api/patients/${patientId}/report`, { method: 'POST' });
   },
   createDocument(input: { name: string; description?: string; patientId?: number | null; staffId?: number | null; file: PickedFile }) {
     const body = new FormData();

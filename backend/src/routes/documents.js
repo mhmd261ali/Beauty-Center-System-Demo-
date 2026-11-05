@@ -67,19 +67,66 @@ const documentSelect = `
 `;
 
 router.get(
+  '/people',
+  asyncHandler(async (_req, res) => {
+    const [patients, staff] = await Promise.all([
+      pool.query(
+        `
+        SELECT
+          p.id,
+          p.full_name AS "fullName",
+          p.therapy_type AS "therapyType",
+          (
+            SELECT COUNT(*)::int
+            FROM documents d
+            WHERE d.patient_id = p.id AND d.stored_name IS NOT NULL
+          ) AS documents
+        FROM patients p
+        ORDER BY p.full_name
+        `,
+      ),
+      pool.query(
+        `
+        SELECT
+          u.id,
+          u.name,
+          u.therapy_type AS "therapyType",
+          (
+            SELECT COUNT(*)::int
+            FROM documents d
+            WHERE d.staff_id = u.id AND d.stored_name IS NOT NULL
+          ) AS documents
+        FROM users u
+        ORDER BY u.name
+        `,
+      ),
+    ]);
+    res.json({ patients: patients.rows, staff: staff.rows });
+  }),
+);
+
+router.get(
   '/',
   asyncHandler(async (req, res) => {
     const term = String(req.query.q || '').trim();
     const pattern = term ? `%${term}%` : null;
+    const patientId = req.query.patientId ? Number(req.query.patientId) : null;
+    const staffId = req.query.staffId ? Number(req.query.staffId) : null;
+    if (req.query.patientId && !Number.isInteger(patientId)) throw fail(400, 'Unknown patient.');
+    if (req.query.staffId && !Number.isInteger(staffId)) throw fail(400, 'Unknown staff member.');
+    const archive = req.query.archive === '1';
     const { rows } = await pool.query(
       `
       ${documentSelect}
       WHERE d.stored_name IS NOT NULL
         AND ($1::text IS NULL OR d.name ILIKE $1)
+        AND ($2::int IS NULL OR d.patient_id = $2)
+        AND ($3::int IS NULL OR d.staff_id = $3)
+        AND ($4::boolean = false OR (d.patient_id IS NULL AND d.staff_id IS NULL))
       ORDER BY d.created_at DESC
       LIMIT 200
       `,
-      [pattern],
+      [pattern, patientId, staffId, archive],
     );
     res.json({
       documents: rows.map(({ storedName, ...document }) => document),
