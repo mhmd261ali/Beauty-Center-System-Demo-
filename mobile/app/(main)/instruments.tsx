@@ -316,7 +316,7 @@ export default function InstrumentsScreen() {
     <Screen>
       <View className="flex-row items-start justify-between">
         <View className="mr-4 flex-1">
-          <PageTitle kicker="Clinic" title="Instruments" detail="Each therapy keeps the tools it uses. The price is counted as outcome, apart from visit income." />
+          <PageTitle kicker="Clinic" title="Instruments" detail="Each therapy keeps the tools it uses. The price is counted as expenses, apart from visit income." />
         </View>
         {adding ? null : (
           <Pressable accessibilityRole="button" onPress={beginAdd} className="mt-1 rounded-full bg-clay px-3 py-2">

@@ -126,6 +126,20 @@ async function main() {
     )
   `);
   await pool.query('INSERT INTO clinic_settings (id, reminder_hours) VALUES (1, 24) ON CONFLICT (id) DO NOTHING');
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS therapies (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS therapies_name_idx ON therapies (lower(name))');
+  for (const name of ['Occupational therapy', 'Speech therapy', 'Physiotherapy']) {
+    await pool.query(
+      'INSERT INTO therapies (name) SELECT $1 WHERE NOT EXISTS (SELECT 1 FROM therapies WHERE lower(name) = lower($1))',
+      [name],
+    );
+  }
   await pool.query(`ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS reminder_mode TEXT NOT NULL DEFAULT 'before'`);
   await pool.query(`ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS reminder_time TIME NOT NULL DEFAULT '18:00'`);
   await pool.query('DELETE FROM documents WHERE stored_name IS NULL OR file_name IS NULL');

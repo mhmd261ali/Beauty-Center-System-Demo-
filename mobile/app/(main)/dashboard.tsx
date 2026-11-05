@@ -295,7 +295,7 @@ export default function DashboardScreen() {
             iconColor: '#c4921a',
           },
           {
-            label: 'Outcome',
+            label: 'Expenses',
             value: dollars(report?.totalOutcome ?? 0),
             hint: 'Salaries, rent, services, equipment',
             hintColor: '#9b3b36',
@@ -381,7 +381,7 @@ export default function DashboardScreen() {
                     Income
                   </Text>
                   <Text style={font.medium} className="w-24 text-right text-xs uppercase tracking-wide text-mute">
-                    Outcome
+                    Expenses
                   </Text>
                 </>
               ) : (
@@ -411,7 +411,7 @@ export default function DashboardScreen() {
                       </Text>
                       <Text style={font.sans} className="mt-0.5 text-xs text-mute">
                         {therapy.sessions} {therapy.sessions === 1 ? 'session' : 'sessions'}
-                        {showIncome ? ` · income ${dollars(therapy.income)} · outcome ${dollars(therapy.outcome)}` : ''}
+                        {showIncome ? ` · income ${dollars(therapy.income)} · expenses ${dollars(therapy.outcome)}` : ''}
                       </Text>
                     </View>
                     {pill}

@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
 const { asyncHandler, fail, EMAIL, ROLES, text } = require('../http');
-const { THERAPY_SET } = require('../care');
+const { resolveTherapy } = require('../care');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -27,7 +27,6 @@ function accountInput(body, passwordRequired) {
   }
   if (!phone || phone.length < 3) throw fail(400, 'Enter a phone number.');
   if (!ROLES.includes(role)) throw fail(400, 'Choose admin, sub-admin, or user.');
-  if (therapyType && !THERAPY_SET.has(therapyType)) throw fail(400, 'Choose a therapy type.');
   return { name, email, password, role, phone, therapyType };
 }
 
@@ -52,6 +51,8 @@ router.post(
   '/',
   asyncHandler(async (req, res) => {
     const account = accountInput(req.body, true);
+    account.therapyType = await resolveTherapy(account.therapyType);
+    if (account.therapyType == null && text(req.body.therapyType, 80, 'Therapy')) throw fail(400, 'Choose a therapy type.');
     const { rows } = await pool.query(
       `
       INSERT INTO users (name, email, password_hash, role, phone, therapy_type)
@@ -68,6 +69,8 @@ router.patch(
   '/:id',
   asyncHandler(async (req, res) => {
     const account = accountInput(req.body, false);
+    account.therapyType = await resolveTherapy(account.therapyType);
+    if (account.therapyType == null && text(req.body.therapyType, 80, 'Therapy')) throw fail(400, 'Choose a therapy type.');
     const values = [account.name, account.email, account.phone, account.role, account.therapyType];
     let passwordSql = '';
     if (account.password) {

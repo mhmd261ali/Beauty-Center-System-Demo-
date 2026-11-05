@@ -141,7 +141,7 @@ export default function OutcomeScreen() {
     try {
       setReport(await api.outcome(month));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not load outcome.');
+      setError(reason instanceof Error ? reason.message : 'Could not load expenses.');
     }
   }, [month]);
 
@@ -240,7 +240,7 @@ export default function OutcomeScreen() {
     <Screen>
       <PageTitle
         kicker="Admin"
-        title="Outcome"
+        title="Expenses"
         detail={`Payments in ${monthLabel(cursor.year, cursor.month)}. Add one at a time. Each one stays in the list for this month.`}
       />
       {error ? <Banner tone="error">{error}</Banner> : null}

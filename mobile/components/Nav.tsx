@@ -16,6 +16,7 @@ const ITEMS = [
   { href: '/patients', label: 'Patients', icon: 'patients' },
   { href: '/documents', label: 'Documents', icon: 'documents' },
   { href: '/instruments', label: 'Instruments', icon: 'instruments' },
+  { href: '/services', label: 'Available services', icon: 'services' },
 ] as const;
 
 type NavIconName = (typeof ITEMS)[number]['icon'] | 'staff' | 'income' | 'outcome' | 'settings';
@@ -30,7 +31,7 @@ export function SideNav({ user, pendingCount, sessionNow, insetTop, insetBottom,
   const extras: { href: string; label: string; icon: NavIconName }[] = [];
   if (canSeeIncome(user.role)) {
     extras.push({ href: '/income', label: 'Income', icon: 'income' });
-    extras.push({ href: '/outcome', label: 'Outcome', icon: 'outcome' });
+    extras.push({ href: '/outcome', label: 'Expenses', icon: 'outcome' });
   }
   if (canManageStaff(user.role)) extras.push({ href: '/staff', label: 'Staff', icon: 'staff' });
   if (canManageSettings(user.role)) extras.push({ href: '/settings', label: 'Settings', icon: 'settings' });
@@ -220,7 +221,9 @@ function NavIcon({ name, color }: { name: NavIconName; color: string }) {
                       ? '▤'
                       : name === 'instruments'
                         ? '⚒'
-                        : name === 'income'
+                        : name === 'services'
+                          ? '✦'
+                          : name === 'income'
                           ? '$'
                           : name === 'outcome'
                             ? '↓'
@@ -322,6 +325,13 @@ function NavIcon({ name, color }: { name: NavIconName; color: string }) {
     return (
       <svg {...common}>
         <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+      </svg>
+    );
+  }
+  if (name === 'services') {
+    return (
+      <svg {...common}>
+        <polygon points="12 2 15 9 22 9.5 17 14.5 18.5 22 12 18 5.5 22 7 14.5 2 9.5 9 9" />
       </svg>
     );
   }

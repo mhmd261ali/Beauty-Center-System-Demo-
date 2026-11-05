@@ -36,11 +36,13 @@ function draftFrom(person: User): AccountDraft {
 
 function AccountFields({
   draft,
+  therapies,
   onChange,
   passwordLabel,
   passwordPlaceholder,
 }: {
   draft: AccountDraft;
+  therapies: string[];
   onChange: (next: AccountDraft) => void;
   passwordLabel: string;
   passwordPlaceholder?: string;
@@ -83,7 +85,7 @@ function AccountFields({
       </Text>
       <View className="flex-row flex-wrap">
         <Chip label="None" active={draft.therapy == null} onPress={() => onChange({ ...draft, therapy: null })} />
-        {PATIENT_TYPES.map((item) => (
+        {therapies.map((item) => (
           <Chip key={item} label={item} active={draft.therapy === item} onPress={() => onChange({ ...draft, therapy: item })} />
         ))}
       </View>
@@ -95,6 +97,7 @@ export default function StaffScreen() {
   const { user } = useAuth();
   const { width, height } = useWindowDimensions();
   const [people, setPeople] = useState<User[]>([]);
+  const [therapies, setTherapies] = useState<string[]>(PATIENT_TYPES);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<AccountDraft>(emptyDraft);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -109,8 +112,9 @@ export default function StaffScreen() {
   const load = useCallback(async () => {
     if (!allowed) return;
     try {
-      const data = await api.users();
+      const [data, therapyData] = await Promise.all([api.users(), api.therapies()]);
       setPeople(data.users);
+      setTherapies(therapyData.therapies.map((item) => item.name));
       setError(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not load staff.');
@@ -246,6 +250,7 @@ export default function StaffScreen() {
             <View>
               <AccountFields
                 draft={editDraft}
+                therapies={therapies}
                 onChange={setEditDraft}
                 passwordLabel="Password"
                 passwordPlaceholder="Leave blank to keep it"
@@ -318,7 +323,7 @@ export default function StaffScreen() {
               </Text>
               {formError ? <Banner tone="error">{formError}</Banner> : null}
               <ScrollView style={{ maxHeight: addMaxHeight - 160 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                <AccountFields draft={draft} onChange={setDraft} passwordLabel="Password" />
+                <AccountFields draft={draft} therapies={therapies} onChange={setDraft} passwordLabel="Password" />
               </ScrollView>
               <View className="mt-2 flex-row">
                 <View className="mr-3 flex-1">

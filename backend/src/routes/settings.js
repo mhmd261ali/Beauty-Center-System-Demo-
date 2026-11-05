@@ -2,7 +2,8 @@ const express = require('express');
 
 const { pool } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
-const { asyncHandler, fail, isTime } = require('../http');
+const { asyncHandler, fail, isTime, text } = require('../http');
+const { listTherapies } = require('../care');
 
 const router = express.Router();
 router.use(requireAuth, requireRole('admin'));
@@ -65,6 +66,25 @@ router.patch(
       ],
     );
     res.json({ settings: await readSettings() });
+  }),
+);
+
+router.get(
+  '/therapies',
+  asyncHandler(async (_req, res) => {
+    res.json({ therapies: await listTherapies() });
+  }),
+);
+
+router.post(
+  '/therapies',
+  asyncHandler(async (req, res) => {
+    const name = text(req.body.name, 80, 'Therapy');
+    if (!name) throw fail(400, 'Name the therapy.');
+    const existing = await pool.query('SELECT id FROM therapies WHERE lower(name) = lower($1)', [name]);
+    if (existing.rows[0]) throw fail(409, 'That therapy is already on the list.');
+    const { rows } = await pool.query('INSERT INTO therapies (name) VALUES ($1) RETURNING id, name', [name]);
+    res.status(201).json({ therapy: rows[0], therapies: await listTherapies() });
   }),
 );
 

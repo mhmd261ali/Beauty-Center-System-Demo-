@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 
 import { Screen } from '../../components/Screen';
-import { Banner, Button, Chip, PageTitle, font } from '../../components/ui';
+import { Banner, Button, Chip, Field, PageTitle, font } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { formatClock } from '../../lib/format';
@@ -47,6 +47,10 @@ export default function SettingsScreen() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [therapies, setTherapies] = useState<{ id: number; name: string }[]>([]);
+  const [therapyName, setTherapyName] = useState('');
+  const [therapyMessage, setTherapyMessage] = useState<string | null>(null);
+  const [therapyBusy, setTherapyBusy] = useState(false);
   const unchanged = draft.mode === saved.mode && draft.reminderHours === saved.reminderHours && draft.reminderTime === saved.reminderTime;
 
   const load = useCallback(async () => {
@@ -57,6 +61,8 @@ export default function SettingsScreen() {
       setTimes(data.times);
       setSaved(data.settings);
       setDraft(data.settings);
+      const therapyData = await api.therapies();
+      setTherapies(therapyData.therapies);
       setError(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not load settings.');
@@ -68,6 +74,24 @@ export default function SettingsScreen() {
       void load();
     }, [load]),
   );
+
+  async function addTherapy() {
+    const name = therapyName.trim();
+    if (!name) return;
+    setTherapyBusy(true);
+    setError(null);
+    setTherapyMessage(null);
+    try {
+      const data = await api.createTherapy(name);
+      setTherapies(data.therapies);
+      setTherapyName('');
+      setTherapyMessage(`Added ${data.therapy.name}`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not add that therapy.');
+    } finally {
+      setTherapyBusy(false);
+    }
+  }
 
   async function save() {
     setBusy(true);
@@ -95,7 +119,10 @@ export default function SettingsScreen() {
 
   return (
     <Screen>
-      <PageTitle kicker="Settings" title="WhatsApp reminders" detail="Choose one way for WhatsApp to remind patients." />
+      <PageTitle kicker="Settings" title="Clinic settings" detail="Reminders, and the therapies a staff member can be assigned." />
+      <Text style={font.display} className="mb-4 text-2xl text-ink">
+        WhatsApp reminders
+      </Text>
       <View className="mb-6 rounded-2xl border border-line bg-card px-4 py-4">
         <Text style={font.medium} className="text-xs uppercase tracking-widest text-moss">
           Working now
@@ -150,6 +177,32 @@ export default function SettingsScreen() {
         </>
       )}
       <Button label={busy ? 'Saving…' : 'Save reminder'} disabled={busy || unchanged} onPress={() => void save()} />
+      <Text style={font.display} className="mb-2 mt-10 text-2xl text-ink">
+        Therapies
+      </Text>
+      <Text style={font.sans} className="mb-4 text-base leading-6 text-mute">
+        Add a therapy here, then assign it when you add or edit a staff account.
+      </Text>
+      {therapyMessage ? <Banner tone="ok">{therapyMessage}</Banner> : null}
+      <View className="mb-4 rounded-2xl border border-line bg-card px-4 py-4">
+        {therapies.length === 0 ? (
+          <Text style={font.sans} className="text-base text-mute">
+            No therapies yet.
+          </Text>
+        ) : (
+          therapies.map((item) => (
+            <Text key={item.id} style={font.medium} className="mb-2 text-base text-ink">
+              {item.name}
+            </Text>
+          ))
+        )}
+      </View>
+      <Field label="New therapy" value={therapyName} onChangeText={setTherapyName} placeholder="Nutrition" autoCapitalize="words" />
+      <Button
+        label={therapyBusy ? 'Adding…' : 'Add therapy'}
+        disabled={therapyBusy || therapyName.trim() === ''}
+        onPress={() => void addTherapy()}
+      />
     </Screen>
   );
 }

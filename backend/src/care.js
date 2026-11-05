@@ -26,4 +26,16 @@ async function doctorFor(doctorId, therapyType) {
   return { doctorId: doctor.id, doctorName: doctor.name };
 }
 
-module.exports = { THERAPIES, THERAPY_SET, therapyOf, doctorFor };
+async function listTherapies() {
+  const { rows } = await pool.query('SELECT id, name FROM therapies ORDER BY name');
+  return rows;
+}
+
+async function resolveTherapy(value) {
+  const therapy = typeof value === 'string' ? value.trim() : '';
+  if (!therapy) return null;
+  const { rows } = await pool.query('SELECT name FROM therapies WHERE lower(name) = lower($1)', [therapy]);
+  return rows[0]?.name ?? null;
+}
+
+module.exports = { THERAPIES, THERAPY_SET, therapyOf, doctorFor, listTherapies, resolveTherapy };

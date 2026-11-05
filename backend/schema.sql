@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS outcome_payments, instruments, documents, reservations, patients, users;
+DROP TABLE IF EXISTS outcome_payments, instruments, documents, reservations, patients, therapies, users;
 
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
@@ -87,5 +87,12 @@ CREATE TABLE outcome_payments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE therapies (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX therapies_name_idx ON therapies (lower(name));
 CREATE INDEX instruments_therapy_idx ON instruments (therapy_type, name);
 CREATE INDEX outcome_payments_month_idx ON outcome_payments (month, category);

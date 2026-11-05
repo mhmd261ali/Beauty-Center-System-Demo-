@@ -229,4 +229,13 @@ export const api = {
       body: JSON.stringify(body),
     });
   },
+  therapies() {
+    return request<{ therapies: { id: number; name: string }[] }>('/api/settings/therapies');
+  },
+  createTherapy(name: string) {
+    return request<{ therapy: { id: number; name: string }; therapies: { id: number; name: string }[] }>('/api/settings/therapies', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  },
 };
