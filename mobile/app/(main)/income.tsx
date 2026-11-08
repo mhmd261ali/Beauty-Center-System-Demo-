@@ -7,22 +7,24 @@ import { Banner, PageTitle, TherapyPill, font, therapySurface } from '../../comp
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import {
-  WEEKDAYS,
+  weekdayLabels,
   formatDay,
   formatMoney,
+  latinRun,
   monthCells,
   monthISO,
   monthLabel,
   toISO,
   todayISO,
 } from '../../lib/format';
+import { useI18n } from '../../lib/i18n';
 import { canSeeIncome } from '../../lib/permissions';
 import type { IncomeMonth } from '../../lib/types';
 
 const CARD_ORDER = ['Company', 'Private', 'Islamic'] as const;
 
 function dollars(value: number | null | undefined) {
-  return `$${formatMoney(value)}`;
+  return latinRun(`$${formatMoney(value).replace(/\u2066|\u2069/g, '')}`);
 }
 
 type DaySession = {
@@ -62,6 +64,7 @@ function sessionsByDate(report: IncomeMonth | null) {
 
 export default function IncomeScreen() {
   const { user } = useAuth();
+  const { t, nameAlign } = useI18n();
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selected, setSelected] = useState(todayISO());
@@ -131,7 +134,7 @@ export default function IncomeScreen() {
       <PageTitle
         kicker="Admin"
         title="Income"
-        detail={loading ? 'Adding the month…' : `Payments recorded in ${monthLabel(cursor.year, cursor.month)}.`}
+        detail={loading ? t('Adding the month…') : t('Payments recorded in {month}.', { month: monthLabel(cursor.year, cursor.month) })}
       />
       {error ? <Banner tone="error">{error}</Banner> : null}
 
@@ -140,7 +143,7 @@ export default function IncomeScreen() {
           <View key={card.label} className="flex-1" style={{ paddingHorizontal: 6 }}>
             <View className="rounded-2xl border border-line bg-card p-4">
               <Text style={font.medium} className="text-xs uppercase tracking-widest text-moss">
-                {card.label}
+                {t(card.label)}
               </Text>
               <Text style={font.display} className="mt-1 text-2xl text-ink">
                 {dollars(card.amount)}
@@ -153,7 +156,7 @@ export default function IncomeScreen() {
       <View className="mb-4 flex-row items-center justify-between">
         <Pressable accessibilityRole="button" onPress={() => shiftMonth(-1)} className="rounded-full border border-line bg-card px-4 py-2">
           <Text style={font.medium} className="text-sm text-ink">
-            Previous
+            {t('Previous')}
           </Text>
         </Pressable>
         <Pressable
@@ -165,19 +168,19 @@ export default function IncomeScreen() {
           }}
         >
           <Text style={font.medium} className="text-sm text-moss">
-            This month
+            {t('This month')}
           </Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => shiftMonth(1)} className="rounded-full border border-line bg-card px-4 py-2">
           <Text style={font.medium} className="text-sm text-ink">
-            Next
+            {t('Next')}
           </Text>
         </Pressable>
       </View>
 
       <View className="overflow-hidden rounded-2xl border border-line bg-card">
         <View className="flex-row">
-          {WEEKDAYS.map((day) => (
+          {weekdayLabels().map((day) => (
             <View key={day} style={{ width: `${100 / 7}%` }} className="border-b border-line py-2">
               <Text style={font.medium} className="text-center text-xs uppercase text-mute">
                 {day}
@@ -231,7 +234,7 @@ export default function IncomeScreen() {
         </View>
         {!selectedDay || selectedDay.sessions.length === 0 ? (
           <Text style={font.sans} className="text-base text-mute">
-            No income recorded on this day.
+            {t('No income recorded on this day.')}
           </Text>
         ) : (
           selectedDay.sessions.map((session, index) => (
@@ -240,12 +243,12 @@ export default function IncomeScreen() {
               className="mb-2 flex-row items-center justify-between rounded-2xl border px-4 py-3"
               style={therapySurface(session.therapyType)}
             >
-              <View className="mr-3 flex-1">
-                <Text style={font.semibold} className="text-base text-ink">
+              <View className="me-3 flex-1">
+                <Text style={[font.semibold, nameAlign]} className="text-base text-ink">
                   {session.patientName}
                 </Text>
-                <Text style={font.sans} className="mt-0.5 text-sm text-mute">
-                  {session.startTime} · {session.type}
+                <Text style={[font.sans, nameAlign]} className="mt-0.5 text-sm text-mute">
+                  {latinRun(session.startTime)} · {t(session.type)}
                 </Text>
               </View>
               <View className="items-end">

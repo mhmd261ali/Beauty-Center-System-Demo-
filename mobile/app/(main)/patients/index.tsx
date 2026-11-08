@@ -5,6 +5,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Screen } from '../../../components/Screen';
 import { Banner, Chip, DateField, Field, FilterIcon, PageTitle, TherapyPill, font, therapySurface } from '../../../components/ui';
 import { api } from '../../../lib/api';
+import { plural, useI18n } from '../../../lib/i18n';
 import { GENDERS, PATIENT_TYPES, PAYER_TYPES, WIDE, addDays, hasSessionQuota, sessionQuotaLabel, todayISO } from '../../../lib/format';
 import type { Patient } from '../../../lib/types';
 const SORTS = [
@@ -24,6 +25,7 @@ function nextSessionDate(patient: Patient) {
 
 export default function PatientsScreen() {
   const router = useRouter();
+  const { t, nameAlign } = useI18n();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
   const [query, setQuery] = useState('');
@@ -75,7 +77,7 @@ export default function PatientsScreen() {
   }, [patients, type, payer, gender, sort, nextDate]);
 
   const list = (
-    <View className={wide ? 'mr-8 flex-1' : ''}>
+    <View className={wide ? 'me-8 flex-1' : ''}>
       <Field label="Search" value={query} onChangeText={setQuery} placeholder="Name or phone" autoCapitalize="words" />
       {visible.length === 0 ? (
         <Text style={font.sans} className="text-base text-mute">
@@ -91,11 +93,11 @@ export default function PatientsScreen() {
             style={therapySurface(patient.therapyType)}
           >
             <View className="flex-row items-start justify-between">
-              <View className="mr-3 flex-1">
-                <Text style={font.semibold} className="text-base text-ink">
+              <View className="me-3 flex-1">
+                <Text style={[font.semibold, nameAlign]} className="text-base text-ink">
                   {patient.fullName}
                 </Text>
-                <Text style={font.sans} className="mt-1 text-sm text-mute">
+                <Text style={[font.sans, nameAlign]} className="mt-1 text-sm text-mute">
                   {sessionQuotaLabel(
                     patient.sessionCount,
                     hasSessionQuota(patient.patientType) ? patient.sessionsAllotted : null,
@@ -125,7 +127,7 @@ export default function PatientsScreen() {
         ))}
       </View>
       <Text style={font.medium} className="mb-2 mt-3 text-xs uppercase tracking-widest text-moss">
-        Patient type
+        {t('Patient type')}
       </Text>
       <View className="flex-row flex-wrap">
         <Chip label="All" active={payer === 'All'} onPress={() => setPayer('All')} />
@@ -134,7 +136,7 @@ export default function PatientsScreen() {
         ))}
       </View>
       <Text style={font.medium} className="mb-2 mt-3 text-xs uppercase tracking-widest text-moss">
-        Gender
+        {t('Gender')}
       </Text>
       <View className="flex-row flex-wrap">
         <Chip label="All" active={gender === 'All'} onPress={() => setGender('All')} />
@@ -143,7 +145,7 @@ export default function PatientsScreen() {
         ))}
       </View>
       <Text style={font.medium} className="mb-2 mt-3 text-xs uppercase tracking-widest text-moss">
-        Next session
+        {t('Next session')}
       </Text>
       <View className="flex-row flex-wrap">
         <Chip label="Any date" active={nextDate.trim() === ''} onPress={() => setNextDate('')} />
@@ -152,7 +154,7 @@ export default function PatientsScreen() {
       </View>
       <DateField label="Or pick a date" value={nextDate} onChange={setNextDate} />
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Sort
+        {t('Sort')}
       </Text>
       <View className="flex-row flex-wrap">
         {SORTS.map((item) => (
@@ -165,11 +167,11 @@ export default function PatientsScreen() {
   return (
     <Screen>
       <View className="flex-row items-start justify-between">
-        <View className="mr-4 flex-1">
+        <View className="me-4 flex-1">
           <PageTitle
             kicker="Overview"
             title="Patients"
-            detail={`${visible.length} ${visible.length === 1 ? 'patient' : 'patients'}`}
+            detail={plural(visible.length, '1 patient', '{n} patients')}
           />
         </View>
         <View className="mt-1 items-end">
@@ -179,7 +181,7 @@ export default function PatientsScreen() {
             className="rounded-full bg-clay px-3 py-2"
           >
             <Text style={font.medium} className="text-sm text-card">
-              Add patient
+              {t('Add patient')}
             </Text>
           </Pressable>
           {wide ? null : (

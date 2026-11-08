@@ -7,6 +7,7 @@ import { Screen } from '../../components/Screen';
 import { Banner, Button, Chip, DateField, Field, PageTitle, font } from '../../components/ui';
 import { api } from '../../lib/api';
 import { PATIENT_TYPES, addDays, addMinutes, formatClock, formatDay, todayISO } from '../../lib/format';
+import { translate, useI18n } from '../../lib/i18n';
 import type { Doctor, PickedFile, Reservation } from '../../lib/types';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -32,6 +33,7 @@ function passed(date: string, slot: string) {
 }
 
 export default function SelfBookScreen() {
+  const { t } = useI18n();
   const today = todayISO();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -162,14 +164,24 @@ export default function SelfBookScreen() {
             file,
           });
         } catch (reason) {
-          setMessage(`Booked ${result.reservation.patientName} for ${formatDay(date)}, ${formatClock(slot)}–${formatClock(end)}.`);
+          setMessage(translate('Booked {name} for {when}, {start}–{end}.', {
+        name: result.reservation.patientName,
+        when: formatDay(date),
+        start: formatClock(slot),
+        end: formatClock(end),
+      }));
           setError(reason instanceof Error ? reason.message : 'The visit is booked, but the document was not saved.');
           reset();
           await load();
           return;
         }
       }
-      setMessage(`Booked ${result.reservation.patientName} for ${formatDay(date)}, ${formatClock(slot)}–${formatClock(end)}.`);
+      setMessage(translate('Booked {name} for {when}, {start}–{end}.', {
+        name: result.reservation.patientName,
+        when: formatDay(date),
+        start: formatClock(slot),
+        end: formatClock(end),
+      }));
       reset();
       await load();
     } catch (reason) {
@@ -192,7 +204,7 @@ export default function SelfBookScreen() {
       <Field label="Name" value={name} onChangeText={setName} placeholder="Full name" autoCapitalize="words" />
       <Field label="Phone number" value={phone} onChangeText={setPhone} placeholder="555-0100" keyboardType="phone-pad" />
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Type of therapy
+        {t('Type of therapy')}
       </Text>
       <View className="flex-row flex-wrap">
         {PATIENT_TYPES.map((item) => (
@@ -200,17 +212,17 @@ export default function SelfBookScreen() {
         ))}
       </View>
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Doctor
+        {t('Doctor')}
       </Text>
       {therapy ? (
         clinicians.length === 0 ? (
           <Text style={font.sans} className="mb-4 text-base text-mute">
-            No doctors for this therapy yet.
+            {t('No doctors for this therapy yet.')}
           </Text>
         ) : (
           <View className="flex-row flex-wrap">
             {clinicians.map((doctor) => (
-              <Chip key={doctor.id} label={doctor.name} active={doctorId === doctor.id} onPress={() => setDoctorId(doctor.id)} />
+              <Chip key={doctor.id} label={doctor.name} raw active={doctorId === doctor.id} onPress={() => setDoctorId(doctor.id)} />
             ))}
           </View>
         )
@@ -221,23 +233,23 @@ export default function SelfBookScreen() {
       )}
       <Field label="Note" value={note} onChangeText={setNote} multiline placeholder="Optional" />
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Document
+        {t('Document')}
       </Text>
       <View className="mb-4 flex-row flex-wrap items-center">
-        <Pressable accessibilityRole="button" onPress={() => void pickFile()} className="mb-2 mr-3 rounded-full border border-line bg-card px-3 py-2">
+        <Pressable accessibilityRole="button" onPress={() => void pickFile()} className="mb-2 me-3 rounded-full border border-line bg-card px-3 py-2">
           <Text style={font.medium} className="text-sm text-ink">
-            {file ? 'Change file' : 'Attach a file'}
+            {file ? t('Change file') : t('Attach a file')}
           </Text>
         </Pressable>
         {file ? (
           <Pressable accessibilityRole="button" onPress={() => setFile(null)} className="mb-2">
             <Text style={font.sans} className="text-sm text-mute">
-              {file.name} · Remove
+              {file.name} · {t('Remove')}
             </Text>
           </Pressable>
         ) : (
           <Text style={font.sans} className="mb-2 text-sm text-mute">
-            Optional
+            {t('Optional')}
           </Text>
         )}
       </View>
@@ -245,7 +257,7 @@ export default function SelfBookScreen() {
       <View className="mb-3 flex-row flex-wrap">
         {[0, 1, 2, 3].map((offset) => {
           const value = addDays(today, offset);
-          const label = offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : formatDay(value).split(',')[0];
+          const label = offset === 0 ? t('Today') : offset === 1 ? t('Tomorrow') : formatDay(value).split(/[,،]/)[0];
           return (
             <Chip
               key={value}
@@ -257,11 +269,11 @@ export default function SelfBookScreen() {
         })}
       </View>
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Time
+        {t('Time')}
       </Text>
       {open.length === 0 ? (
         <Text style={font.sans} className="mb-4 text-base text-mute">
-          No open times on this day.
+          {t('No open times on this day.')}
         </Text>
       ) : (
         <View className="flex-row flex-wrap">

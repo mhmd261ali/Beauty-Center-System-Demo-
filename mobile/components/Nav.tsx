@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, Platform, Pressable, Text, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 
+import { LanguageSwitch, useI18n } from '../lib/i18n';
 import { canManageSettings, canManageStaff, canSeeIncome } from '../lib/permissions';
 import type { User } from '../lib/types';
 import { font } from './ui';
@@ -28,6 +29,7 @@ function isActive(pathname: string, href: string) {
 export function SideNav({ user, pendingCount, sessionNow, insetTop, insetBottom, onSignOut, onNavigate, brand = true }: { user: User; pendingCount: number; sessionNow: boolean; insetTop: number; insetBottom: number; onSignOut: () => void; onNavigate?: () => void; brand?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t, rtl } = useI18n();
   const extras: { href: string; label: string; icon: NavIconName }[] = [];
   if (canSeeIncome(user.role)) {
     extras.push({ href: '/income', label: 'Income', icon: 'income' });
@@ -46,10 +48,10 @@ export function SideNav({ user, pendingCount, sessionNow, insetTop, insetBottom,
         {brand ? (
           <>
             <Text style={font.display} className="text-3xl text-card">
-              DoubleA
+              {t('Sekretariat')}
             </Text>
             <Text style={font.sans} className="mb-8 mt-1 text-sm text-sand">
-              Clinic desk
+              {t('Clinic desk')}
             </Text>
           </>
         ) : null}
@@ -65,11 +67,11 @@ export function SideNav({ user, pendingCount, sessionNow, insetTop, insetBottom,
               }}
               className={`mb-1 flex-row items-center rounded-xl px-3 py-3 ${active ? 'bg-white/10' : ''}`}
             >
-              <View className="mr-3 h-5 w-5 items-center justify-center">
+              <View className="me-3 h-5 w-5 items-center justify-center">
                 <NavIcon name={item.icon} color={active ? '#ffffff' : '#d7f4f4'} />
               </View>
               <Text style={font.medium} className={`text-base ${active ? 'text-card' : 'text-sand'}`}>
-                {item.label}
+                {t(item.label)}
               </Text>
               {item.href === '/bookings' && sessionNow ? <LiveDot /> : null}
               {item.href === '/pending' && pendingCount > 0 ? <PendingMark count={pendingCount} /> : null}
@@ -77,13 +79,14 @@ export function SideNav({ user, pendingCount, sessionNow, insetTop, insetBottom,
           );
         })}
       </View>
-      <View className="flex-row items-center">
-        <Text style={font.semibold} className="mr-3 flex-1 text-base text-card" numberOfLines={1}>
+      <View className="flex-row items-center" style={{ direction: 'ltr' }}>
+        <Text style={[font.semibold, rtl ? { textAlign: 'right' } : null]} className="me-3 flex-1 text-base text-card" numberOfLines={1}>
           {user.name}
         </Text>
-        <Pressable accessibilityRole="button" accessibilityLabel="Sign out" onPress={onSignOut} className="h-9 w-9 items-center justify-center rounded-full">
+        <Pressable accessibilityRole="button" accessibilityLabel={t('Sign out')} onPress={onSignOut} className="h-9 w-9 items-center justify-center rounded-full">
           <SignOutIcon color="#d7f4f4" />
         </Pressable>
+        <LanguageSwitch tone="pine" />
       </View>
     </View>
   );
@@ -122,19 +125,21 @@ function MenuIcon({ open }: { open: boolean }) {
 }
 
 export function MobileHeader({ user, open, onToggle }: { user: User; open: boolean; onToggle: () => void }) {
+  const { t, rtl } = useI18n();
+  const brandAlign = rtl ? { textAlign: 'right' as const } : null;
   return (
     <View className="flex-row items-center justify-between border-b border-line bg-paper px-4 py-3">
-      <View className="mr-3 flex-1">
-        <Text style={font.display} className="text-2xl text-ink">
-          DoubleA
+      <View className="me-3 flex-1">
+        <Text style={[font.display, brandAlign]} className="text-2xl text-ink">
+          {t('Sekretariat')}
         </Text>
-        <Text style={font.sans} className="text-xs text-mute" numberOfLines={1}>
+        <Text style={[font.sans, brandAlign]} className="text-xs text-mute" numberOfLines={1}>
           {user.name}
         </Text>
       </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={open ? 'Close menu' : 'Open menu'}
+        accessibilityLabel={open ? t('Close menu') : t('Open menu')}
         onPress={onToggle}
         className="h-11 w-11 items-center justify-center rounded-xl border border-line bg-card"
       >
@@ -145,6 +150,7 @@ export function MobileHeader({ user, open, onToggle }: { user: User; open: boole
 }
 
 function LiveDot({ compact = false }: { compact?: boolean }) {
+  const { t } = useI18n();
   const opacity = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     const pulse = Animated.loop(
@@ -160,10 +166,10 @@ function LiveDot({ compact = false }: { compact?: boolean }) {
   return (
     <Animated.View
       pointerEvents="none"
-      accessibilityLabel="A session is on now"
+      accessibilityLabel={t('A session is on now')}
       style={{
         opacity,
-        marginLeft: compact ? 4 : 'auto',
+        marginStart: compact ? 4 : 'auto',
         width: size,
         height: size,
         borderRadius: size / 2,
@@ -176,11 +182,11 @@ function LiveDot({ compact = false }: { compact?: boolean }) {
 function PendingMark({ count, compact = false }: { count: number; compact?: boolean }) {
   return (
     <View
-      className={`flex-row items-center justify-center rounded-md ${compact ? '' : 'ml-auto'}`}
+      className={`flex-row items-center justify-center rounded-md ${compact ? '' : 'ms-auto'}`}
       style={{ backgroundColor: '#d92d20', paddingHorizontal: compact ? 4 : 6, paddingVertical: compact ? 1 : 2, minWidth: compact ? 22 : 28 }}
     >
       <Text style={[font.semibold, { color: '#ffffff', fontSize: compact ? 10 : 12, lineHeight: compact ? 13 : 16 }]}>!</Text>
-      <Text style={[font.semibold, { color: '#ffffff', fontSize: compact ? 10 : 12, lineHeight: compact ? 13 : 16, marginLeft: 2 }]}>
+      <Text style={[font.semibold, { color: '#ffffff', fontSize: compact ? 10 : 12, lineHeight: compact ? 13 : 16, marginStart: 2 }]}>
         {count}
       </Text>
     </View>
@@ -371,6 +377,7 @@ function NavIcon({ name, color }: { name: NavIconName; color: string }) {
 export function BottomNav({ inset, pendingCount, sessionNow }: { inset: number; pendingCount: number; sessionNow: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useI18n();
   return (
     <View style={{ paddingBottom: Math.max(inset, 8) }} className="flex-row border-t border-line bg-card px-1 pt-2">
       {ITEMS.map((item) => {
@@ -378,7 +385,7 @@ export function BottomNav({ inset, pendingCount, sessionNow }: { inset: number; 
         return (
           <Pressable key={item.href} accessibilityRole="button" onPress={() => router.push(item.href)} className="flex-1 items-center py-2">
             <Text style={font.medium} className={`text-xs ${active ? 'text-moss' : 'text-mute'}`}>
-              {item.label}
+              {t(item.label)}
             </Text>
             {item.href === '/bookings' && sessionNow ? <LiveDot compact /> : null}
             {item.href === '/pending' && pendingCount > 0 ? <PendingMark count={pendingCount} compact /> : null}

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { api } from '../lib/api';
-import { hasSessionQuota, sessionQuotaLabel, todayISO } from '../lib/format';
+import { useI18n } from '../lib/i18n';
+import { hasSessionQuota, latinRun, sessionQuotaLabel, todayISO } from '../lib/format';
 import type { Patient } from '../lib/types';
 import { Banner, Field, TherapyPill, font, therapySurface } from './ui';
 
@@ -19,6 +20,7 @@ export function PatientSearch({
   listHeight?: number;
   fillList?: boolean;
 }) {
+  const { t, back, forward, nameAlign } = useI18n();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Patient[]>([]);
   const [page, setPage] = useState(0);
@@ -61,21 +63,21 @@ export function PatientSearch({
     return (
       <View className="mb-4 rounded-2xl border p-4" style={therapySurface(selected.therapyType)}>
         <View className="mb-1 flex-row items-start justify-between">
-          <Text style={font.semibold} className="mr-3 flex-1 text-lg text-ink">
+          <Text style={[font.semibold, nameAlign]} className="me-3 flex-1 text-lg text-ink">
             {selected.fullName}
           </Text>
           <TherapyPill therapy={selected.therapyType} />
         </View>
-        <Text style={font.sans} className="mt-1 text-sm text-mute">
-          {selected.phone || 'No phone on file'}
+        <Text style={[font.sans, nameAlign]} className="mt-1 text-sm text-mute">
+          {selected.phone ? latinRun(selected.phone) : t('No phone on file')}
           {hasSessionQuota(selected.patientType)
             ? ` · ${sessionQuotaLabel(selected.sessionCount, selected.sessionsAllotted)}`
             : ''}
-          {selected.nextVisit ? ` · Next ${selected.nextVisit}` : ''}
+          {selected.nextVisit ? ` · ${t('Next {when}', { when: selected.nextVisit })}` : ''}
         </Text>
         <Pressable accessibilityRole="button" onPress={() => onSelect(null)} className="mt-3 self-start">
           <Text style={font.medium} className="text-sm text-moss">
-            Choose someone else
+            {t('Choose someone else')}
           </Text>
         </Pressable>
       </View>
@@ -94,16 +96,16 @@ export function PatientSearch({
             style={therapySurface(patient.therapyType)}
           >
             <View className="flex-row items-start justify-between">
-              <View className="mr-3 flex-1">
-                <Text style={font.medium} className="text-base text-ink">
+              <View className="me-3 flex-1">
+                <Text style={[font.medium, nameAlign]} className="text-base text-ink">
                   {patient.fullName}
                 </Text>
-                <Text style={font.sans} className="mt-0.5 text-sm text-mute">
-                  {patient.phone || 'No phone'}
+                <Text style={[font.sans, nameAlign]} className="mt-0.5 text-sm text-mute">
+                  {patient.phone ? latinRun(patient.phone) : t('No phone')}
                   {hasSessionQuota(patient.patientType)
                     ? ` · ${sessionQuotaLabel(patient.sessionCount, patient.sessionsAllotted)}`
                     : ''}
-                  {patient.nextVisit ? ` · Next ${patient.nextVisit}` : ''}
+                  {patient.nextVisit ? ` · ${t('Next {when}', { when: patient.nextVisit })}` : ''}
                 </Text>
               </View>
               <TherapyPill therapy={patient.therapyType} />
@@ -113,7 +115,7 @@ export function PatientSearch({
       })}
       {results.length === 0 && query.trim() ? (
         <Text style={font.sans} className="mb-3 text-sm text-mute">
-          No one matches that name.
+          {t('No one matches that name.')}
         </Text>
       ) : null}
     </View>
@@ -123,11 +125,13 @@ export function PatientSearch({
     <View className="mb-2" style={fillList ? { flex: 1, minHeight: 0 } : undefined}>
       {scrolling ? null : (
         <View className="mb-3 flex-row items-center justify-between">
-          <PageArrow label="Previous patients" glyph="←" disabled={current === 0} onPress={() => setPage(current - 1)} />
+          <PageArrow label={t('Previous patients')} glyph={back} disabled={current === 0} onPress={() => setPage(current - 1)} />
           <Text style={font.medium} className="text-sm text-mute">
-            {results.length === 0 ? 'No patients' : `${current * PAGE + 1}–${current * PAGE + visible.length} of ${results.length}`}
+            {results.length === 0
+              ? t('No patients')
+              : `${latinRun(`${current * PAGE + 1}–${current * PAGE + visible.length}`)} ${t('of')} ${latinRun(results.length)}`}
           </Text>
-          <PageArrow label="Next patients" glyph="→" disabled={current >= pages - 1} onPress={() => setPage(current + 1)} />
+          <PageArrow label={t('Next patients')} glyph={forward} disabled={current >= pages - 1} onPress={() => setPage(current + 1)} />
         </View>
       )}
       <Field label="Find a patient" value={query} onChangeText={setQuery} placeholder="Name or phone" autoCapitalize="words" />

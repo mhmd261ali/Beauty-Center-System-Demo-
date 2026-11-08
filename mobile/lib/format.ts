@@ -1,6 +1,45 @@
 export const WIDE = 960;
 
+let locale = 'en';
+
+export function setActiveLocale(next: string) {
+  locale = next;
+}
+
+const latinDigits = { numberingSystem: 'latn' as const };
+
+export function latinRun(value: string | number) {
+  return `\u2066${value}\u2069`;
+}
+
 export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const WEEKDAYS_AR = ['إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت', 'أحد'];
+
+const WEEKDAYS_LONG_AR = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+const MONTHS_AR = [
+  'كانون الثاني',
+  'شباط',
+  'آذار',
+  'نيسان',
+  'أيار',
+  'حزيران',
+  'تموز',
+  'آب',
+  'أيلول',
+  'تشرين الأول',
+  'تشرين الثاني',
+  'كانون الأول',
+];
+
+function arabicLocale() {
+  return locale.startsWith('ar');
+}
+
+export function weekdayLabels() {
+  return locale.startsWith('ar') ? WEEKDAYS_AR : WEEKDAYS;
+}
 
 export const DURATIONS = [15, 20, 30, 45, 60, 90, 120, 150, 180];
 
@@ -21,9 +60,12 @@ export function remainingSessions(allotted?: number | null, used?: number | null
 
 export function sessionQuotaLabel(used?: number | null, allotted?: number | null) {
   const taken = used ?? 0;
+  const arabic = locale.startsWith('ar');
   if (allotted == null) {
+    if (arabic) return taken === 1 ? 'جلسة واحدة' : `${latinRun(taken)} جلسات`;
     return `${taken} ${taken === 1 ? 'session' : 'sessions'}`;
   }
+  if (arabic) return `${latinRun(taken)} من ${latinRun(allotted)}`;
   return `${taken} of ${allotted} ${allotted === 1 ? 'session' : 'sessions'}`;
 }
 
@@ -57,9 +99,9 @@ export function addDays(iso: string, days: number) {
 
 export function formatClock(hhmm: string) {
   const [hours, mins] = hhmm.split(':').map(Number);
-  const suffix = hours >= 12 ? 'PM' : 'AM';
+  const suffix = hours >= 12 ? (locale.startsWith('ar') ? 'م' : 'PM') : locale.startsWith('ar') ? 'ص' : 'AM';
   const hour12 = hours % 12 || 12;
-  return `${hour12}:${String(mins).padStart(2, '0')} ${suffix}`;
+  return `${latinRun(`${hour12}:${String(mins).padStart(2, '0')}`)} ${suffix}`;
 }
 
 export function addMinutes(hhmm: string, amount: number) {
@@ -70,30 +112,31 @@ export function addMinutes(hhmm: string, amount: number) {
 }
 
 export function formatLong(iso: string) {
-  return parseISO(iso).toLocaleDateString(undefined, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const date = parseISO(iso);
+  if (!arabicLocale()) {
+    return date.toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  return `${WEEKDAYS_LONG_AR[date.getDay()]}، ${latinRun(date.getDate())} ${MONTHS_AR[date.getMonth()]} ${latinRun(date.getFullYear())}`;
 }
 
 export function formatDay(iso: string) {
-  return parseISO(iso).toLocaleDateString(undefined, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+  const date = parseISO(iso);
+  if (!arabicLocale()) {
+    return date.toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+  return `${WEEKDAYS_LONG_AR[date.getDay()]}، ${latinRun(date.getDate())} ${MONTHS_AR[date.getMonth()]}`;
 }
 
 export function formatStamp(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  if (!arabicLocale()) return date.toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' });
+  return `${latinRun(date.getDate())} ${MONTHS_AR[date.getMonth()]} ${latinRun(date.getFullYear())}`;
 }
 
 export function monthLabel(year: number, month: number) {
-  return new Date(year, month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  if (!arabicLocale()) return new Date(year, month, 1).toLocaleDateString('en', { month: 'long', year: 'numeric' });
+  return `${MONTHS_AR[month]} ${latinRun(year)}`;
 }
 
 export function monthCells(year: number, month: number) {
@@ -120,7 +163,7 @@ export function ageFrom(dob: string | null) {
 
 export function formatMoney(value: number | null | undefined) {
   const amount = Number(value) || 0;
-  return amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  return latinRun(amount.toLocaleString('en', { ...latinDigits, minimumFractionDigits: 0, maximumFractionDigits: 2 }));
 }
 
 export function monthISO(year: number, monthIndex: number) {

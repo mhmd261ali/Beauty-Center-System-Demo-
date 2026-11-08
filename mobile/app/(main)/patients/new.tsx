@@ -6,10 +6,12 @@ import { Screen } from '../../../components/Screen';
 import { Banner, Button, Chip, DateField, Field, PageTitle, font } from '../../../components/ui';
 import { api } from '../../../lib/api';
 import { GENDERS, PATIENT_TYPES, PAYER_TYPES, hasSessionQuota, todayISO } from '../../../lib/format';
+import { useI18n } from '../../../lib/i18n';
 import type { Doctor } from '../../../lib/types';
 
 export default function NewPatientScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [dob, setDob] = useState('');
@@ -80,7 +82,7 @@ export default function NewPatientScreen() {
     <Screen>
       <Pressable accessibilityRole="button" onPress={() => router.back()} className="mb-4 self-start">
         <Text style={font.medium} className="text-sm text-moss">
-          Back to patients
+          {t('Back to patients')}
         </Text>
       </Pressable>
       <PageTitle kicker="Patients" title="Add a patient" detail="Name, phone, birthday, gender, patient type, therapy, one doctor, and the case." />
@@ -89,7 +91,7 @@ export default function NewPatientScreen() {
       <Field label="Phone number" value={phone} onChangeText={setPhone} placeholder="555-0100" keyboardType="phone-pad" />
       <DateField label="Date of birth" value={dob} onChange={setDob} max={todayISO()} />
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Gender
+        {t('Gender')}
       </Text>
       <View className="mb-4 flex-row flex-wrap">
         {GENDERS.map((item) => (
@@ -97,7 +99,7 @@ export default function NewPatientScreen() {
         ))}
       </View>
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Patient type
+        {t('Patient type')}
       </Text>
       <View className="mb-4 flex-row flex-wrap">
         {PAYER_TYPES.map((item) => (
@@ -122,7 +124,7 @@ export default function NewPatientScreen() {
         />
       ) : null}
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Therapy type
+        {t('Therapy type')}
       </Text>
       <View className="mb-4 flex-row flex-wrap">
         {PATIENT_TYPES.map((item) => (
@@ -130,13 +132,13 @@ export default function NewPatientScreen() {
         ))}
       </View>
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Doctor following the case
+        {t('Doctor following the case')}
       </Text>
       <View className="mb-4 flex-row flex-wrap">
         {doctors
           .filter((doctor) => doctor.therapyType === therapy)
           .map((doctor) => (
-            <Chip key={doctor.id} label={doctor.name} active={doctorId === doctor.id} onPress={() => setDoctorId(doctor.id)} />
+            <Chip key={doctor.id} label={doctor.name} raw active={doctorId === doctor.id} onPress={() => setDoctorId(doctor.id)} />
           ))}
       </View>
       <View className="mt-4">

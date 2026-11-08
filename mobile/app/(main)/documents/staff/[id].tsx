@@ -7,6 +7,7 @@ import { Screen } from '../../../../components/Screen';
 import { Banner, PageTitle, confirmAction, font } from '../../../../components/ui';
 import { api } from '../../../../lib/api';
 import { useAuth } from '../../../../lib/auth';
+import { useI18n } from '../../../../lib/i18n';
 import { canDelete } from '../../../../lib/permissions';
 import type { DocumentRow } from '../../../../lib/types';
 
@@ -15,6 +16,7 @@ export default function StaffDocumentsScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const staffId = Number(params.id);
   const { user } = useAuth();
+  const { t } = useI18n();
   const [name, setName] = useState('Staff');
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +55,10 @@ export default function StaffDocumentsScreen() {
     <Screen>
       <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/documents', params: { tab: 'staff' } })} className="mb-4 self-start">
         <Text style={font.medium} className="text-sm text-moss">
-          All documents
+          {t('All documents')}
         </Text>
       </Pressable>
-      <PageTitle kicker="Staff" title={name} detail="Documents filed for this staff member." />
+      <PageTitle kicker="Staff" raw title={name} detail="Documents filed for this staff member." />
       {error ? <Banner tone="error">{error}</Banner> : null}
       <DocumentCards
         documents={documents}

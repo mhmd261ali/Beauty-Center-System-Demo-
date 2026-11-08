@@ -6,10 +6,12 @@ import { Screen } from '../../components/Screen';
 import { VisitCard } from '../../components/VisitCard';
 import { Banner, PageTitle, font } from '../../components/ui';
 import { api } from '../../lib/api';
+import { plural, useI18n } from '../../lib/i18n';
 import { publishPendingCount } from '../../lib/pendingBadge';
 import type { Reservation } from '../../lib/types';
 
 export default function PendingScreen() {
+  const { t } = useI18n();
   const [pending, setPending] = useState<Reservation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,15 +53,15 @@ export default function PendingScreen() {
       <PageTitle
         kicker="Bookings"
         title="Pending"
-        detail={loading ? 'Opening finished sessions…' : pending.length ? `${pending.length} waiting to be submitted` : 'Nothing is waiting'}
+        detail={loading ? t('Opening finished sessions…') : pending.length ? plural(pending.length, '1 waiting to be submitted', '{n} waiting to be submitted') : t('Nothing is waiting')}
       />
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Text style={font.sans} className="mb-4 text-base leading-6 text-mute">
-        Sessions whose time has finished stay here until they are submitted.
+        {t('Sessions whose time has finished stay here until they are submitted.')}
       </Text>
       {pending.length === 0 && !loading ? (
         <Text style={font.sans} className="text-base text-mute">
-          No finished sessions are waiting.
+          {t('No finished sessions are waiting.')}
         </Text>
       ) : (
         pending.map((visit) => (

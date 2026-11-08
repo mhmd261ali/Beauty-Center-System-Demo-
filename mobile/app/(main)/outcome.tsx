@@ -6,7 +6,8 @@ import { Screen } from '../../components/Screen';
 import { Banner, Button, Chip, Field, PageTitle, font } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { formatMoney, monthISO, monthLabel } from '../../lib/format';
+import { formatMoney, latinRun, monthISO, monthLabel } from '../../lib/format';
+import { plural, translate, useI18n } from '../../lib/i18n';
 import { canSeeIncome } from '../../lib/permissions';
 import type { OutcomeMonth, User } from '../../lib/types';
 
@@ -20,7 +21,7 @@ const CATEGORY_LABEL: Record<ManualKey, string> = {
 };
 
 function dollars(value: number | null | undefined) {
-  return `$${formatMoney(value)}`;
+  return latinRun(`$${formatMoney(value).replace(/\u2066|\u2069/g, '')}`);
 }
 
 function priceOf(value: string) {
@@ -43,6 +44,7 @@ function StaffMenu({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { t, nameAlign } = useI18n();
   const [open, setOpen] = useState(false);
   const chosen = people.find((person) => String(person.id) === value);
 
@@ -50,10 +52,10 @@ function StaffMenu({
     return (
       <View className="mb-4">
         <Text style={font.medium} className="mb-1.5 text-xs uppercase tracking-widest text-moss">
-          Staff
+          {t('Staff')}
         </Text>
         <select
-          aria-label="Staff"
+          aria-label={t('Staff')}
           value={value}
           onChange={(event) => onChange(event.currentTarget.value)}
           style={{
@@ -67,9 +69,10 @@ function StaffMenu({
             border: '1px solid #c9e4e4',
             borderRadius: 12,
             padding: '0 12px',
+            textAlign: nameAlign ? 'right' : 'left',
           }}
         >
-          <option value="">Choose staff</option>
+          <option value="">{t('Choose staff')}</option>
           {people.map((person) => (
             <option key={person.id} value={String(person.id)}>
               {staffLabel(person)}
@@ -83,15 +86,15 @@ function StaffMenu({
   return (
     <View className="mb-4">
       <Text style={font.medium} className="mb-1.5 text-xs uppercase tracking-widest text-moss">
-        Staff
+        {t('Staff')}
       </Text>
       <Pressable
         accessibilityRole="button"
         onPress={() => setOpen((current) => !current)}
         className="rounded-xl border border-line bg-card px-3 py-3"
       >
-        <Text style={font.sans} className={chosen ? 'text-base text-ink' : 'text-base text-mute'}>
-          {chosen ? staffLabel(chosen) : 'Choose staff'}
+        <Text style={[font.sans, nameAlign]} className={chosen ? 'text-base text-ink' : 'text-base text-mute'}>
+          {chosen ? staffLabel(chosen) : t('Choose staff')}
         </Text>
       </Pressable>
       {open ? (
@@ -106,7 +109,7 @@ function StaffMenu({
               }}
               className="border-b border-line px-3 py-3"
             >
-              <Text style={font.medium} className="text-base text-ink">
+              <Text style={[font.medium, nameAlign]} className="text-base text-ink">
                 {staffLabel(person)}
               </Text>
             </Pressable>
@@ -119,6 +122,7 @@ function StaffMenu({
 
 export default function OutcomeScreen() {
   const { user } = useAuth();
+  const { t, nameAlign } = useI18n();
   const router = useRouter();
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
@@ -214,7 +218,7 @@ export default function OutcomeScreen() {
       setStaffId('');
       setLabel('');
       setAmount('');
-      showToast(`Added ${who}`);
+      showToast(t('Added {who}', { who }));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not save that payment.');
     } finally {
@@ -227,7 +231,7 @@ export default function OutcomeScreen() {
     try {
       setReport(await api.deleteOutcome(id, month));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : `Could not remove ${name}.`);
+      setError(reason instanceof Error ? reason.message : t('Could not remove {name}.', { name }));
     }
   }
 
@@ -241,14 +245,14 @@ export default function OutcomeScreen() {
       <PageTitle
         kicker="Admin"
         title="Expenses"
-        detail={`Payments in ${monthLabel(cursor.year, cursor.month)}. Add one at a time. Each one stays in the list for this month.`}
+        detail={t('Payments in {month}. Add one at a time. Each one stays in the list for this month.', { month: monthLabel(cursor.year, cursor.month) })}
       />
       {error ? <Banner tone="error">{error}</Banner> : null}
 
       <View className="mb-4 flex-row items-center justify-between">
         <Pressable accessibilityRole="button" onPress={() => shiftMonth(-1)} className="rounded-full border border-line bg-card px-4 py-2">
           <Text style={font.medium} className="text-sm text-ink">
-            Previous
+            {t('Previous')}
           </Text>
         </Pressable>
         <Pressable
@@ -264,7 +268,7 @@ export default function OutcomeScreen() {
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => shiftMonth(1)} className="rounded-full border border-line bg-card px-4 py-2">
           <Text style={font.medium} className="text-sm text-ink">
-            Next
+            {t('Next')}
           </Text>
         </Pressable>
       </View>
@@ -284,13 +288,13 @@ export default function OutcomeScreen() {
               }}
             >
               <Text style={font.medium} className="text-xs uppercase tracking-widest text-moss">
-                {card.label}
+                {t(card.label)}
               </Text>
               <Text style={font.display} className="mt-1 text-2xl text-ink">
                 {dollars(card.total)}
               </Text>
               <Text style={font.sans} className="mt-1 text-xs text-mute">
-                {card.items.length} {card.items.length === 1 ? 'payment' : 'payments'}
+                {plural(card.items.length, '1 payment', '{n} payments')}
               </Text>
             </Pressable>
           </View>
@@ -298,12 +302,12 @@ export default function OutcomeScreen() {
       </View>
 
       <Text style={[font.semibold, { fontVariant: ['tabular-nums'] }]} className="mb-6 text-base text-ink">
-        Month total {dollars(report?.total ?? 0)}
+        {t('Month total {amount}', { amount: dollars(report?.total ?? 0) })}
       </Text>
 
       <View className="mb-8 rounded-2xl border border-line bg-card p-4">
         <Text style={font.semibold} className="mb-3 text-lg text-ink">
-          Add a payment
+          {t('Add a payment')}
         </Text>
         <View className="flex-row flex-wrap">
           {MANUAL.map((key) => (
@@ -327,27 +331,27 @@ export default function OutcomeScreen() {
       {categories.map((section) => (
         <View key={section.key} className="mb-6">
           <Text style={font.semibold} className="mb-3 text-lg text-ink">
-            {section.label}
+            {t(section.label)}
           </Text>
           {section.key === 'equipment' ? (
             <Text style={font.sans} className="mb-3 text-sm text-mute">
-              These prices are saved on Instruments for this month.
+              {t('These prices are saved on Instruments for this month.')}
             </Text>
           ) : null}
           {section.items.length === 0 ? (
             <Text style={font.sans} className="text-base text-mute">
-              Nothing recorded yet.
+              {t('Nothing recorded yet.')}
             </Text>
           ) : (
             section.items.map((item) => (
               <View key={`${section.key}-${item.id}`} className="mb-2 flex-row items-center rounded-2xl border border-line bg-card px-4 py-3">
-                <View className="mr-3 flex-1">
-                  <Text style={font.semibold} className="text-base text-ink">
+                <View className="me-3 flex-1">
+                  <Text style={[font.semibold, section.key === 'salaries' ? nameAlign : null]} className="text-base text-ink">
                     {item.label}
                   </Text>
                   {item.therapyType ? (
                     <Text style={font.sans} className="mt-0.5 text-sm text-mute">
-                      {item.therapyType}
+                      {t(item.therapyType)}
                     </Text>
                   ) : null}
                 </View>
@@ -355,15 +359,15 @@ export default function OutcomeScreen() {
                   {dollars(item.amount)}
                 </Text>
                 {section.key === 'equipment' ? (
-                  <Pressable accessibilityRole="button" onPress={() => router.push('/instruments')} className="ml-4">
+                  <Pressable accessibilityRole="button" onPress={() => router.push('/instruments')} className="ms-4">
                     <Text style={font.medium} className="text-sm text-moss">
-                      Instruments
+                      {t('Instruments')}
                     </Text>
                   </Pressable>
                 ) : (
-                  <Pressable accessibilityRole="button" onPress={() => void remove(item.id, item.label)} className="ml-4">
+                  <Pressable accessibilityRole="button" onPress={() => void remove(item.id, item.label)} className="ms-4">
                     <Text style={font.medium} className="text-sm text-moss">
-                      Remove
+                      {t('Remove')}
                     </Text>
                   </Pressable>
                 )}

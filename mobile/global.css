@@ -9,7 +9,40 @@ body,
   background: #f3fbfb;
 }
 
+html[dir='rtl'] {
+  direction: rtl;
+}
+
 input,
 textarea {
   outline: none;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #9ecfcf transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #9ecfcf;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #4bbbbc;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }

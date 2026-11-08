@@ -6,12 +6,13 @@ import { Screen } from '../../components/Screen';
 import { Banner, MonthField, font, therapyTone } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { formatMoney, monthISO, shiftMonthISO } from '../../lib/format';
+import { formatMoney, latinRun, monthISO, shiftMonthISO } from '../../lib/format';
+import { useI18n } from '../../lib/i18n';
 import { canSeeIncome } from '../../lib/permissions';
 import type { DashboardReport } from '../../lib/types';
 
 function dollars(value: number | null | undefined) {
-  return `$${formatMoney(value)}`;
+  return latinRun(`$${formatMoney(value).replace(/\u2066|\u2069/g, '')}`);
 }
 
 function percent(part: number, whole: number) {
@@ -151,6 +152,7 @@ function StatCard({
   icon: IconName;
   iconColor: string;
 }) {
+  const { t } = useI18n();
   return (
     <View
       className="flex-1 p-5"
@@ -163,7 +165,7 @@ function StatCard({
     >
       <View className="mb-5 flex-row items-start justify-between">
         <Text style={font.medium} className="text-sm text-ink">
-          {label}
+          {t(label)}
         </Text>
         <DashIcon name={icon} color={iconColor} />
       </View>
@@ -171,19 +173,20 @@ function StatCard({
         {value}
       </Text>
       <Text style={[font.medium, { color: hintColor }]} className="mt-2 text-sm">
-        {hint}
+        {t(hint)}
       </Text>
     </View>
   );
 }
 
 function Pill({ label, tone }: { label: string; tone: 'ok' | 'warn' | 'mute' }) {
+  const { t } = useI18n();
   const bg = tone === 'ok' ? '#dcfce7' : tone === 'warn' ? '#ffedd5' : '#eef4f4';
   const fg = tone === 'ok' ? '#15803d' : tone === 'warn' ? '#c2410c' : '#5c7576';
   return (
     <View className="self-start rounded-full px-2.5 py-1" style={{ backgroundColor: bg }}>
       <Text style={[font.medium, { color: fg }]} className="text-xs">
-        {label}
+        {t(label)}
       </Text>
     </View>
   );
@@ -204,6 +207,7 @@ function Bar({ value, color }: { value: number; color: string }) {
 }
 
 function MixChip({ label, value, color, icon }: { label: string; value: number; color: string; icon: IconName }) {
+  const { t } = useI18n();
   return (
     <View className="flex-1 items-center rounded-2xl border border-line bg-card px-2 py-3">
       <DashIcon name={icon} color={color} />
@@ -211,7 +215,7 @@ function MixChip({ label, value, color, icon }: { label: string; value: number; 
         {value}
       </Text>
       <Text style={font.medium} className="mt-1 text-center text-xs text-mute">
-        {label}
+        {t(label)}
       </Text>
     </View>
   );
@@ -220,6 +224,7 @@ function MixChip({ label, value, color, icon }: { label: string; value: number; 
 export default function DashboardScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { t, back, forward, nameAlign } = useI18n();
   const { width } = useWindowDimensions();
   const wide = width >= 780;
   const now = new Date();
@@ -259,7 +264,7 @@ export default function DashboardScreen() {
     {
       label: 'Sessions',
       value: String(totalSessions),
-      hint: `${completed} completed`,
+      hint: t('{n} completed', { n: completed }),
       hintColor: '#22a06b',
       tint: '#e7f8ef',
       icon: 'calendar' as const,
@@ -268,7 +273,7 @@ export default function DashboardScreen() {
     {
       label: 'Cancelled',
       value: String(cancelled),
-      hint: `${scheduled} upcoming`,
+      hint: t('{n} upcoming', { n: scheduled }),
       hintColor: '#2eb5c0',
       tint: '#e5f7fb',
       icon: 'close' as const,
@@ -277,7 +282,7 @@ export default function DashboardScreen() {
     {
       label: 'Patients',
       value: String(patients.length),
-      hint: `${withVisits} with visits`,
+      hint: t('{n} with visits', { n: withVisits }),
       hintColor: '#e07a6a',
       tint: '#eef8ee',
       icon: 'people' as const,
@@ -320,30 +325,30 @@ export default function DashboardScreen() {
   return (
     <Screen>
       <Text style={font.display} className="mb-4 text-3xl text-ink">
-        Dashboard
+        {t('Dashboard')}
       </Text>
       <View className="mb-5 flex-row items-end">
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Previous month"
+          accessibilityLabel={t('Previous month')}
           onPress={() => setMonth((current) => shiftMonthISO(current, -1))}
-          className="mb-4 mr-2 h-12 w-12 items-center justify-center rounded-xl border border-line bg-card"
+          className="mb-4 me-2 h-12 w-12 items-center justify-center rounded-xl border border-line bg-card"
         >
           <Text style={font.semibold} className="text-base text-ink">
-            ←
+            {back}
           </Text>
         </Pressable>
-        <View className="mr-2 flex-1">
+        <View className="me-2 flex-1">
           <MonthField value={month} onChange={(value) => { if (/^\d{4}-\d{2}$/.test(value)) setMonth(value); }} />
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Next month"
+          accessibilityLabel={t('Next month')}
           onPress={() => setMonth((current) => shiftMonthISO(current, 1))}
           className="mb-4 h-12 w-12 items-center justify-center rounded-xl border border-line bg-card"
         >
           <Text style={font.semibold} className="text-base text-ink">
-            →
+            {forward}
           </Text>
         </Pressable>
       </View>
@@ -358,35 +363,35 @@ export default function DashboardScreen() {
       </View>
 
       <View className={wide ? 'mb-5 flex-row items-start' : 'mb-5'}>
-        <View className={wide ? 'mr-4 flex-1' : 'mb-4'} style={PANEL}>
+        <View className={wide ? 'me-4 flex-1' : 'mb-4'} style={PANEL}>
           <View className="px-5 pb-2 pt-5">
             <Text style={font.semibold} className="text-lg text-ink">
-              Therapies
+              {t('Therapies')}
             </Text>
           </View>
           {wide ? (
             <View className="flex-row px-5 pb-2">
               <Text style={font.medium} className="flex-1 text-xs uppercase tracking-wide text-mute">
-                Name
+                {t('Name')}
               </Text>
               <Text style={font.medium} className="w-24 text-xs uppercase tracking-wide text-mute">
-                Share
+                {t('Share')}
               </Text>
               <Text style={font.medium} className="w-24 text-xs uppercase tracking-wide text-mute">
-                Status
+                {t('Status')}
               </Text>
               {showIncome ? (
                 <>
                   <Text style={font.medium} className="w-20 text-right text-xs uppercase tracking-wide text-mute">
-                    Income
+                    {t('Income')}
                   </Text>
                   <Text style={font.medium} className="w-24 text-right text-xs uppercase tracking-wide text-mute">
-                    Expenses
+                    {t('Expenses')}
                   </Text>
                 </>
               ) : (
                 <Text style={font.medium} className="w-16 text-right text-xs uppercase tracking-wide text-mute">
-                  Sessions
+                  {t('Sessions')}
                 </Text>
               )}
             </View>
@@ -405,13 +410,13 @@ export default function DashboardScreen() {
               return (
                 <View key={therapy.name} className="border-t border-line px-5 py-3.5" style={{ backgroundColor: tone.bg }}>
                   <View className="mb-2 flex-row items-center justify-between">
-                    <View className="mr-3 flex-1">
+                    <View className="me-3 flex-1">
                       <Text style={font.semibold} className="text-sm text-ink">
-                        {therapy.name}
+                        {t(therapy.name)}
                       </Text>
                       <Text style={font.sans} className="mt-0.5 text-xs text-mute">
-                        {therapy.sessions} {therapy.sessions === 1 ? 'session' : 'sessions'}
-                        {showIncome ? ` · income ${dollars(therapy.income)} · expenses ${dollars(therapy.outcome)}` : ''}
+                        {therapy.sessions === 1 ? t('1 session') : t('{n} sessions', { n: therapy.sessions })}
+                        {showIncome ? ` · ${t('income {income}', { income: dollars(therapy.income) })} · ${t('expenses {expenses}', { expenses: dollars(therapy.outcome) })}` : ''}
                       </Text>
                     </View>
                     {pill}
@@ -422,15 +427,15 @@ export default function DashboardScreen() {
             }
             return (
               <View key={therapy.name} className="flex-row items-center border-t border-line px-5 py-3.5" style={{ backgroundColor: tone.bg }}>
-                <View className="mr-3 flex-1">
+                <View className="me-3 flex-1">
                   <Text style={font.semibold} className="text-sm text-ink">
-                    {therapy.name}
+                    {t(therapy.name)}
                   </Text>
                   <Text style={font.sans} className="mt-0.5 text-xs text-mute">
-                    {therapy.sessions} {therapy.sessions === 1 ? 'session' : 'sessions'}
+                    {therapy.sessions === 1 ? t('1 session') : t('{n} sessions', { n: therapy.sessions })}
                   </Text>
                 </View>
-                <View className="w-24 pr-3">
+                <View className="w-24 pe-3">
                   <Bar value={share} color={tone.mark} />
                 </View>
                 <View className="w-24">{pill}</View>
@@ -456,17 +461,17 @@ export default function DashboardScreen() {
         <View className={wide ? 'w-80' : ''} style={PANEL}>
           <View className="p-5">
             <Text style={font.semibold} className="text-lg text-ink">
-              Session mix
+              {t('Session mix')}
             </Text>
             <Text style={font.display} className="mt-2 text-4xl text-ink">
               {mix}%
             </Text>
             <Text style={font.sans} className="mb-4 text-sm text-mute">
-              completed of booked sessions
+              {t('completed of booked sessions')}
             </Text>
             <View className="mb-4 flex-row">
               {assigned.map((therapy, index) => (
-                <View key={therapy.name} className={index === assigned.length - 1 ? 'flex-1' : 'mr-1.5 flex-1'}>
+                <View key={therapy.name} className={index === assigned.length - 1 ? 'flex-1' : 'me-1.5 flex-1'}>
                   <View className="mb-1 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: '#eef4f4' }}>
                     <View
                       className="h-1.5 rounded-full"
@@ -495,25 +500,25 @@ export default function DashboardScreen() {
             style={{ backgroundColor: '#0f5c5e' }}
           >
             <Text style={font.display} className="text-2xl text-card">
-              Book the next visit
+              {t('Book the next visit')}
             </Text>
             <Text style={font.sans} className="mt-1 text-sm text-sand">
-              Open the booking desk
+              {t('Open the booking desk')}
             </Text>
           </Pressable>
         </View>
       </View>
 
       <View className={wide ? 'flex-row items-start' : ''}>
-        <View className={wide ? 'mr-4 flex-1' : 'mb-4'} style={PANEL}>
+        <View className={wide ? 'me-4 flex-1' : 'mb-4'} style={PANEL}>
           <View className="px-5 pb-2 pt-5">
             <Text style={font.semibold} className="text-lg text-ink">
-              Therapists
+              {t('Therapists')}
             </Text>
           </View>
           {therapists.length === 0 ? (
             <Text style={font.sans} className="px-5 pb-5 text-sm text-mute">
-              No therapists on the desk yet.
+              {t('No therapists on the desk yet.')}
             </Text>
           ) : (
             therapists.map((person) => {
@@ -521,19 +526,19 @@ export default function DashboardScreen() {
               return (
                 <View key={person.id} className="flex-row items-center border-t border-line px-5 py-3" style={{ backgroundColor: tone.bg }}>
                   <View
-                    className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+                    className="me-3 h-10 w-10 items-center justify-center rounded-full"
                     style={{ backgroundColor: tone.mark }}
                   >
                     <Text style={font.semibold} className="text-sm text-card">
                       {initials(person.name ?? 'T')}
                     </Text>
                   </View>
-                  <View className="mr-3 flex-1">
-                    <Text style={font.semibold} className="text-sm text-ink">
+                  <View className="me-3 flex-1">
+                    <Text style={[font.semibold, nameAlign]} className="text-sm text-ink">
                       {person.name}
                     </Text>
-                    <Text style={font.sans} className="text-xs text-mute">
-                      {tone.label}
+                    <Text style={[font.sans, nameAlign]} className="text-xs text-mute">
+                      {t(tone.label)}
                     </Text>
                   </View>
                   <Text style={[font.semibold, { fontVariant: ['tabular-nums'] }]} className="text-sm text-ink">
@@ -548,17 +553,17 @@ export default function DashboardScreen() {
         <View className={wide ? 'flex-1' : ''} style={PANEL}>
           <View className="flex-row items-center justify-between px-5 pb-2 pt-5">
             <Text style={font.semibold} className="text-lg text-ink">
-              Patients
+              {t('Patients')}
             </Text>
             <Pressable accessibilityRole="button" onPress={() => router.push('/patients')}>
               <Text style={font.medium} className="text-sm text-moss">
-                View all
+                {t('View all')}
               </Text>
             </Pressable>
           </View>
           {topPatients.length === 0 ? (
             <Text style={font.sans} className="px-5 pb-5 text-sm text-mute">
-              No patients on file.
+              {t('No patients on file.')}
             </Text>
           ) : (
             topPatients.map((person) => {
@@ -572,19 +577,19 @@ export default function DashboardScreen() {
                   style={{ backgroundColor: tone.bg }}
                 >
                   <View
-                    className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+                    className="me-3 h-10 w-10 items-center justify-center rounded-full"
                     style={{ backgroundColor: tone.mark }}
                   >
                     <Text style={font.semibold} className="text-sm text-card">
                       {initials(person.fullName ?? 'P')}
                     </Text>
                   </View>
-                  <View className="mr-3 flex-1">
-                    <Text style={font.semibold} className="text-sm text-ink">
+                  <View className="me-3 flex-1">
+                    <Text style={[font.semibold, nameAlign]} className="text-sm text-ink">
                       {person.fullName}
                     </Text>
-                    <Text style={font.sans} className="text-xs text-mute">
-                      {tone.label}
+                    <Text style={[font.sans, nameAlign]} className="text-xs text-mute">
+                      {t(tone.label)}
                     </Text>
                   </View>
                   <Text style={[font.semibold, { fontVariant: ['tabular-nums'] }]} className="text-sm text-ink">

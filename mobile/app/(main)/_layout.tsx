@@ -6,11 +6,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MobileHeader, SideNav } from '../../components/Nav';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { useI18n } from '../../lib/i18n';
 import { WIDE, minutesOf, todayISO } from '../../lib/format';
 import { publishPendingCount, subscribePendingCount } from '../../lib/pendingBadge';
 
 export default function MainLayout() {
   const { user, ready, signOut } = useAuth();
+  const { t } = useI18n();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
@@ -82,7 +84,7 @@ export default function MainLayout() {
               {sideNav}
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Close menu"
+                accessibilityLabel={t('Close menu')}
                 onPress={() => setMenuOpen(false)}
                 className="flex-1"
                 style={{ backgroundColor: 'rgba(18, 48, 51, 0.4)' }}

@@ -10,6 +10,7 @@ import { StaffSearch } from '../../../components/StaffSearch';
 import { Banner, Button, Field, PageTitle, TherapyPill, confirmAction, font, therapySurface } from '../../../components/ui';
 import { api } from '../../../lib/api';
 import { useAuth } from '../../../lib/auth';
+import { useI18n } from '../../../lib/i18n';
 import { canDelete, canUpload } from '../../../lib/permissions';
 import type { DocumentRow, Patient, PickedFile, User } from '../../../lib/types';
 
@@ -34,6 +35,7 @@ export default function DocumentsScreen() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const section: Section = params.tab === 'staff' || params.tab === 'archive' ? params.tab : 'patients';
   const { user } = useAuth();
+  const { t, nameAlign } = useI18n();
   const { width, height } = useWindowDimensions();
   const [patients, setPatients] = useState<PersonRow[]>([]);
   const [staffPeople, setStaffPeople] = useState<PersonRow[]>([]);
@@ -167,7 +169,7 @@ export default function DocumentsScreen() {
         staffId: subject === 'staff' ? staff?.id : undefined,
         file,
       });
-      setMessage(`Added “${name.trim()}”.`);
+      setMessage(t('Added “{name}”.', { name: name.trim() }));
       setAdding(false);
       resetForm();
       if (subject === 'archive') router.setParams({ tab: 'archive' });
@@ -193,13 +195,13 @@ export default function DocumentsScreen() {
   return (
     <Screen>
       <View className="flex-row items-start justify-between">
-        <View className="mr-4 flex-1">
+        <View className="me-4 flex-1">
           <PageTitle kicker="Files" title="Documents" detail="Patients, staff, and the archive." />
         </View>
         {upload ? (
           <Pressable accessibilityRole="button" onPress={beginAdd} className="mt-1 rounded-full bg-clay px-3 py-2">
             <Text style={font.medium} className="text-sm text-card">
-              Add a document
+              {t('Add a document')}
             </Text>
           </Pressable>
         ) : null}
@@ -216,7 +218,7 @@ export default function DocumentsScreen() {
             className={`flex-1 items-center rounded-full py-2 ${section === item.id ? 'bg-pine' : ''}`}
           >
             <Text style={[font.medium, { color: section === item.id ? '#ffffff' : '#123033' }]} className="text-sm">
-              {item.label}
+              {t(item.label)}
             </Text>
           </Pressable>
         ))}
@@ -237,7 +239,7 @@ export default function DocumentsScreen() {
         />
       ) : visiblePeople.length === 0 ? (
         <Text style={font.sans} className="text-base text-mute">
-          {people.length === 0 ? `No ${section} yet.` : 'No one matches this search.'}
+          {people.length === 0 ? (section === 'staff' ? t('No staff yet.') : t('No patients yet.')) : t('No one matches this search.')}
         </Text>
       ) : (
         visiblePeople.map((person) => (
@@ -251,12 +253,12 @@ export default function DocumentsScreen() {
             style={therapySurface(person.therapyType)}
           >
             <View className="flex-row items-center justify-between">
-              <View className="mr-3 flex-1">
-                <Text style={font.semibold} className="text-base text-ink">
+              <View className="me-3 flex-1">
+                <Text style={[font.semibold, nameAlign]} className="text-base text-ink">
                   {person.name}
                 </Text>
-                <Text style={font.sans} className="mt-1 text-sm text-mute">
-                  {person.documents} {person.documents === 1 ? 'document' : 'documents'}
+                <Text style={[font.sans, nameAlign]} className="mt-1 text-sm text-mute">
+                  {person.documents === 1 ? t('1 document') : t('{n} documents', { n: person.documents })}
                 </Text>
               </View>
               <TherapyPill therapy={person.therapyType} />
@@ -279,13 +281,13 @@ export default function DocumentsScreen() {
               }}
             >
               <Text style={font.display} className="mb-3 text-2xl text-ink">
-                Add a document
+                {t('Add a document')}
               </Text>
               {formError ? <Banner tone="error">{formError}</Banner> : null}
               <Field label="Document name" value={name} onChangeText={setName} placeholder="Hassan blood panel" />
               <Field label="Description" value={description} onChangeText={setDescription} placeholder="What the file is for" />
               <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-                This document refers to
+                {t('This document refers to')}
               </Text>
               <View className="mb-3 flex-row rounded-full border border-line bg-card p-1">
                 {(['patients', 'staff', 'archive'] as Subject[]).map((item) => (
@@ -297,7 +299,7 @@ export default function DocumentsScreen() {
                     className={`flex-1 items-center rounded-full py-2 ${subject === item ? 'bg-pine' : ''}`}
                   >
                     <Text style={[font.medium, { color: subject === item ? '#ffffff' : '#123033' }]} className="text-sm capitalize">
-                      {item}
+                      {t(item)}
                     </Text>
                   </Pressable>
                 ))}
@@ -308,16 +310,16 @@ export default function DocumentsScreen() {
                 <PatientSearch selected={patient} onSelect={setPatient} fillList={pickingPerson} />
               ) : (
                 <Text style={font.sans} className="mb-3 text-sm leading-5 text-mute">
-                  Archive files are not tied to a patient or a staff member.
+                  {t('Archive files are not tied to a patient or a staff member.')}
                 </Text>
               )}
               <Pressable accessibilityRole="button" onPress={() => void pickFile()} className="mb-3 rounded-xl border border-dashed border-line bg-card px-3 py-3">
                 <Text style={font.medium} className="text-sm text-ink">
-                  {file ? file.name : 'Choose a PDF, image, text, or Word file'}
+                  {file ? file.name : t('Choose a PDF, image, text, or Word file')}
                 </Text>
               </Pressable>
               <View className="flex-row">
-                <View className="mr-3 flex-1">
+                <View className="me-3 flex-1">
                   <Button label={busy ? 'Adding…' : 'Save document'} disabled={busy} onPress={() => void submit()} />
                 </View>
                 <View className="flex-1">

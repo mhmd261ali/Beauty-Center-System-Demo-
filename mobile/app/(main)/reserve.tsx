@@ -7,7 +7,8 @@ import { Screen } from '../../components/Screen';
 import { Banner, Button, Chip, DateField, Field, PageTitle, font } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { DURATIONS, PATIENT_TYPES, START_TIMES, WIDE, addDays, addMinutes, formatClock, formatDay, todayISO } from '../../lib/format';
+import { DURATIONS, PATIENT_TYPES, START_TIMES, WIDE, addDays, addMinutes, formatClock, formatDay, latinRun, todayISO } from '../../lib/format';
+import { translate, useI18n } from '../../lib/i18n';
 import { canEdit } from '../../lib/permissions';
 import type { Patient } from '../../lib/types';
 
@@ -16,6 +17,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export default function ReserveScreen() {
   const params = useLocalSearchParams<{ date?: string }>();
   const { user } = useAuth();
+  const { t, nameAlign } = useI18n();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
   const passedDate = typeof params.date === 'string' && DATE.test(params.date) ? params.date : todayISO();
@@ -70,10 +72,15 @@ export default function ReserveScreen() {
         status: 'scheduled',
       });
       const overlap = result.overlaps
-        .map((visit) => `${visit.patientName} (${visit.startTime}–${visit.endTime})`)
+        .map((visit) => `${visit.patientName} (${latinRun(`${visit.startTime}–${visit.endTime}`)})`)
         .join(', ');
-      const booked = `Booked ${result.reservation.patientName} for ${formatDay(date)}, ${startTime}–${end}.`;
-      setMessage(overlap ? `${booked} This overlaps ${overlap}.` : booked);
+      const booked = translate('Booked {name} for {when}, {start}–{end}.', {
+        name: result.reservation.patientName,
+        when: formatDay(date),
+        start: startTime,
+        end,
+      });
+      setMessage(overlap ? `${booked} ${translate('This overlaps {names}.', { names: overlap })}` : booked);
       setPatient(null);
       setNotes('');
     } catch (reasonError) {
@@ -95,7 +102,7 @@ export default function ReserveScreen() {
       <View className="mb-3 flex-row flex-wrap">
         {[0, 1, 2, 3].map((offset) => {
           const value = addDays(today, offset);
-          const label = offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : formatDay(value).split(',')[0];
+          const label = offset === 0 ? t('Today') : offset === 1 ? t('Tomorrow') : formatDay(value).split(/[,،]/)[0];
           return <Chip key={value} label={`${label} ${value.slice(5)}`} active={date === value} onPress={() => setDate(value)} />;
         })}
       </View>
@@ -129,25 +136,25 @@ export default function ReserveScreen() {
       </View>
       <View className="mb-4">
         <Text style={font.medium} className="mb-1 text-xs uppercase tracking-widest text-moss">
-          Reason
+          {t('Reason')}
         </Text>
         <Text style={font.sans} className="text-base text-ink">
-          {patient?.therapyType || 'Not on file'}
+          {patient?.therapyType ? t(patient.therapyType) : t('Not on file')}
         </Text>
       </View>
       <View className="mb-4">
         <Text style={font.medium} className="mb-1 text-xs uppercase tracking-widest text-moss">
-          Doctor
+          {t('Doctor')}
         </Text>
-        <Text style={font.sans} className="text-base text-ink">
-          {patient?.doctorName || 'Not on file'}
+        <Text style={[font.sans, nameAlign]} className="text-base text-ink">
+          {patient?.doctorName || t('Not on file')}
         </Text>
       </View>
       <Field label="Notes" value={notes} onChangeText={setNotes} multiline placeholder="Anything the desk should know" />
       <Button label={busy ? 'Booking…' : 'Book the visit'} disabled={busy} onPress={() => void submit()} />
       {user && !canEdit(user.role) ? (
         <Text style={font.sans} className="mt-3 text-sm leading-5 text-mute">
-          You can book the visit. A sub-admin or admin changes the status afterward.
+          {t('You can book the visit. A sub-admin or admin changes the status afterward.')}
         </Text>
       ) : null}
     </View>
@@ -160,7 +167,7 @@ export default function ReserveScreen() {
       {error ? <Banner tone="error">{error}</Banner> : null}
       {patient && wide ? (
         <View className="flex-row">
-          <View className="mr-8 flex-1">{who}</View>
+          <View className="me-8 flex-1">{who}</View>
           <View className="flex-1">{when}</View>
         </View>
       ) : (

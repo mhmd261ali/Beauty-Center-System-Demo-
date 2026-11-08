@@ -5,11 +5,13 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Screen } from '../../components/Screen';
 import { Banner, PageTitle, StatusPill, TherapyPill, font, therapySurface, therapyTone } from '../../components/ui';
 import { api } from '../../lib/api';
-import { WEEKDAYS, formatDay, monthCells, monthLabel, todayISO, toISO } from '../../lib/format';
+import { weekdayLabels, formatDay, latinRun, monthCells, monthLabel, todayISO, toISO } from '../../lib/format';
+import { useI18n } from '../../lib/i18n';
 import type { Reservation } from '../../lib/types';
 
 export default function CalendarScreen() {
   const router = useRouter();
+  const { t, nameAlign } = useI18n();
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selected, setSelected] = useState(todayISO());
@@ -60,7 +62,7 @@ export default function CalendarScreen() {
       <View className="mb-4 flex-row items-center justify-between">
         <Pressable accessibilityRole="button" onPress={() => shiftMonth(-1)} className="rounded-full border border-line bg-card px-4 py-2">
           <Text style={font.medium} className="text-sm text-ink">
-            Previous
+            {t('Previous')}
           </Text>
         </Pressable>
         <Pressable
@@ -72,19 +74,19 @@ export default function CalendarScreen() {
           }}
         >
           <Text style={font.medium} className="text-sm text-moss">
-            This month
+            {t('This month')}
           </Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => shiftMonth(1)} className="rounded-full border border-line bg-card px-4 py-2">
           <Text style={font.medium} className="text-sm text-ink">
-            Next
+            {t('Next')}
           </Text>
         </Pressable>
       </View>
 
       <View className="overflow-hidden rounded-2xl border border-line bg-card">
         <View className="flex-row">
-          {WEEKDAYS.map((day) => (
+          {weekdayLabels().map((day) => (
             <View key={day} style={{ width: `${100 / 7}%` }} className="border-b border-line py-2">
               <Text style={font.medium} className="text-center text-xs uppercase text-mute">
                 {day}
@@ -117,6 +119,7 @@ export default function CalendarScreen() {
                       key={visit.id}
                       style={[
                         font.sans,
+                        nameAlign,
                         {
                           color: active ? '#f3fbfb' : tone.fg,
                           backgroundColor: active ? 'transparent' : tone.bg,
@@ -128,7 +131,7 @@ export default function CalendarScreen() {
                       className="mt-0.5 text-xs"
                       numberOfLines={1}
                     >
-                      {visit.startTime} {visit.patientName.split(' ')[0]}
+                      {latinRun(visit.startTime)} {visit.patientName.split(' ')[0]}
                     </Text>
                   );
                 })}
@@ -150,13 +153,13 @@ export default function CalendarScreen() {
           </Text>
           <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/reserve', params: { date: selected } })}>
             <Text style={font.medium} className="text-sm text-moss">
-              Book this day
+              {t('Book this day')}
             </Text>
           </Pressable>
         </View>
         {selectedVisits.length === 0 ? (
           <Text style={font.sans} className="text-base text-mute">
-            No one is booked.
+            {t('No one is booked.')}
           </Text>
         ) : (
           selectedVisits.map((visit) => (
@@ -167,11 +170,11 @@ export default function CalendarScreen() {
               className="mb-2 flex-row items-center justify-between rounded-2xl border px-4 py-3"
               style={therapySurface(visit.therapyType)}
             >
-              <View className="mr-3 flex-1">
-                <Text style={[font.semibold, { fontVariant: ['tabular-nums'] }]} className="text-base text-ink">
-                  {visit.startTime}–{visit.endTime}
+              <View className="me-3 flex-1">
+                <Text style={[font.semibold, nameAlign, { fontVariant: ['tabular-nums'] }]} className="text-base text-ink">
+                  {latinRun(`${visit.startTime}–${visit.endTime}`)}
                 </Text>
-                <Text style={font.sans} className="mt-0.5 text-sm text-mute">
+                <Text style={[font.sans, nameAlign]} className="mt-0.5 text-sm text-mute">
                   {visit.patientName}
                   {visit.reason ? ` · ${visit.reason}` : ''}
                 </Text>

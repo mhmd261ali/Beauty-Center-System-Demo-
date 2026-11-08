@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { minutesOf } from '../lib/format';
+import { formatClock, latinRun, minutesOf } from '../lib/format';
+import { useI18n } from '../lib/i18n';
 import type { Reservation } from '../lib/types';
 import { font, therapyTone } from './ui';
 
@@ -15,9 +16,7 @@ const LABEL_PAD = 72;
 
 function clockLabel(minute: number) {
   const hour = Math.floor(minute / 60) % 24;
-  const suffix = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:00 ${suffix}`;
+  return formatClock(`${String(hour).padStart(2, '0')}:00`);
 }
 
 type Placed = Reservation & { col: number; cols: number };
@@ -70,6 +69,7 @@ export function Timeline({
   isToday: boolean;
   onSelect: (visit: Reservation) => void;
 }) {
+  const { t, nameAlign } = useI18n();
   const started = useRef(false);
   const [viewport, setViewport] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -109,10 +109,10 @@ export function Timeline({
   }
 
   return (
-    <View>
+    <View style={{ direction: 'ltr' }}>
       <View className="mb-3 flex-row justify-end">
-        <Arrow label="30 minutes earlier" glyph="←" disabled={!canBack} onPress={() => nudge(-1)} />
-        <Arrow label="30 minutes later" glyph="→" disabled={!canForward} onPress={() => nudge(1)} />
+        <Arrow label={t('30 minutes earlier')} glyph="←" disabled={!canBack} onPress={() => nudge(-1)} />
+        <Arrow label={t('30 minutes later')} glyph="→" disabled={!canForward} onPress={() => nudge(1)} />
       </View>
       <View onLayout={(event) => setViewport(event.nativeEvent.layout.width)}>
         {viewport > 0 ? (
@@ -166,9 +166,9 @@ export function Timeline({
                       className="overflow-hidden rounded-lg"
                     >
                       <Text style={[font.medium, { color: tone.fg, fontVariant: ['tabular-nums'] }]} className="text-xs" numberOfLines={1}>
-                        {visit.startTime}–{visit.endTime}
+                        {latinRun(`${visit.startTime}–${visit.endTime}`)}
                       </Text>
-                      <Text style={[font.semibold, { color: tone.fg }]} className="text-sm" numberOfLines={1}>
+                      <Text style={[font.semibold, nameAlign, { color: tone.fg }]} className="text-sm" numberOfLines={1}>
                         {visit.patientName}
                       </Text>
                       {block > 108 && visit.reason ? (
@@ -215,7 +215,7 @@ function Arrow({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      className="ml-2 h-9 w-9 items-center justify-center rounded-full border border-line bg-card"
+      className="ms-2 h-9 w-9 items-center justify-center rounded-full border border-line bg-card"
       style={{ opacity: disabled ? 0.35 : 1 }}
     >
       <Text style={font.semibold} className="text-base text-ink">

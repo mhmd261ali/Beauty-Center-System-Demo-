@@ -6,7 +6,8 @@ import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { canEdit } from '../lib/permissions';
 import type { Reservation, VisitStatus } from '../lib/types';
-import { formatLong, formatMoney } from '../lib/format';
+import { formatLong, formatMoney, latinRun } from '../lib/format';
+import { useI18n } from '../lib/i18n';
 import { Banner, Button, Chip, Field, StatusPill, TherapyPill, font, STATUS, therapyTone } from './ui';
 
 const STATUSES: VisitStatus[] = ['scheduled', 'completed', 'cancelled'];
@@ -21,6 +22,7 @@ export function VisitCard({
   pending?: boolean;
 }) {
   const { user } = useAuth();
+  const { t, nameAlign } = useI18n();
   const router = useRouter();
   const [notes, setNotes] = useState(visit.notes ?? '');
   const [amount, setAmount] = useState(visit.amountPaid != null ? String(visit.amountPaid) : '');
@@ -60,57 +62,55 @@ export function VisitCard({
   }
 
   return (
-    <View className="rounded-2xl border border-line bg-card p-4" style={{ borderLeftWidth: 4, borderLeftColor: therapyTone(visit.therapyType).line }}>
-      <View className="mb-3 flex-row items-start justify-between">
-        <View className="mr-3 flex-1">
-          <Text style={font.display} className="text-2xl text-ink">
-            {visit.patientName}
-          </Text>
-          <Text style={[font.medium, { fontVariant: ['tabular-nums'] }]} className="mt-1 text-sm text-mute">
-            {pending ? `${formatLong(visit.scheduledDate)} · ` : ''}
-            {visit.startTime}–{visit.endTime}
-          </Text>
-        </View>
-        <View className="items-end">
+    <View className="rounded-2xl border border-line bg-card p-4" style={{ borderStartWidth: 4, borderStartColor: therapyTone(visit.therapyType).line }}>
+      <View className="mb-3">
+        <Text style={[font.display, nameAlign]} className="text-2xl text-ink">
+          {visit.patientName}
+        </Text>
+        <Text style={[font.medium, nameAlign, { fontVariant: ['tabular-nums'] }]} className="mt-1 text-sm text-mute">
+          {pending ? `${formatLong(visit.scheduledDate)} · ` : ''}
+          {latinRun(`${visit.startTime}–${visit.endTime}`)}
+        </Text>
+        <View className="mt-2 flex-row">
           <StatusPill status={pending ? statusChoice : visit.status} />
-          <View className="mt-2">
+          <View className="ms-2">
             <TherapyPill therapy={visit.therapyType} />
           </View>
         </View>
       </View>
       {visit.doctorName ? (
-        <Text style={font.sans} className="text-base text-ink">
+        <Text style={[font.sans, nameAlign]} className="text-base text-ink">
           {visit.doctorName}
         </Text>
       ) : null}
       {visit.reason ? (
-        <Text style={font.sans} className="text-base text-ink">
-          {visit.reason}
+        <Text style={[font.sans, nameAlign]} className="text-base text-ink">
+          {t(visit.reason)}
         </Text>
       ) : null}
       {visit.phone ? (
-        <Text style={font.sans} className="mt-1 text-sm text-mute">
-          {visit.phone}
+        <Text style={[font.sans, nameAlign]} className="mt-1 text-sm text-mute">
+          {latinRun(visit.phone)}
         </Text>
       ) : null}
       {visit.patientType ? (
-        <Text style={font.sans} className="mt-1 text-sm text-mute">
-          {visit.patientType}
+        <Text style={[font.sans, nameAlign]} className="mt-1 text-sm text-mute">
+          {t(visit.patientType)}
         </Text>
       ) : null}
       {!editable && visit.amountPaid != null ? (
-        <Text style={font.sans} className="mt-3 text-base text-ink">
-          Paid {formatMoney(visit.amountPaid)}
+        <Text style={[font.sans, nameAlign]} className="mt-3 text-base text-ink">
+          {t('Paid {amount}', { amount: formatMoney(visit.amountPaid).replace(/\u2066|\u2069/g, '') })}
         </Text>
       ) : null}
       {visit.notes ? (
-        <Text style={font.sans} className="mt-3 text-sm leading-5 text-ink">
+        <Text style={[font.sans, nameAlign]} className="mt-3 text-sm leading-5 text-ink">
           {visit.notes}
         </Text>
       ) : null}
       {visit.createdByName ? (
-        <Text style={font.sans} className="mt-3 text-xs text-mute">
-          Booked by {visit.createdByName}
+        <Text style={[font.sans, nameAlign]} className="mt-3 text-xs text-mute">
+          {t('Booked by {name}', { name: visit.createdByName })}
         </Text>
       ) : null}
       {error ? (
@@ -120,8 +120,8 @@ export function VisitCard({
       ) : null}
       {editable ? (
         <View className="mt-4">
-          <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-            Status
+          <Text style={[font.medium, nameAlign]} className="mb-2 text-xs uppercase tracking-widest text-moss">
+            {t('Status')}
           </Text>
           <View className="flex-row flex-wrap">
             {STATUSES.map((status) => (
@@ -145,6 +145,7 @@ export function VisitCard({
             onChangeText={setAmount}
             placeholder="0"
             keyboardType="decimal-pad"
+            style={nameAlign ?? undefined}
           />
           <Field label="Notes" value={notes} onChangeText={setNotes} multiline placeholder="What happened in the visit" />
           {!pending && visitChanged ? (

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Banner, RolePill, font } from '../components/ui';
 import { useAuth } from '../lib/auth';
+import { LanguageSwitch, useI18n } from '../lib/i18n';
 import { serverUrl } from '../lib/api';
 import { WIDE } from '../lib/format';
 import type { Role } from '../lib/types';
@@ -20,6 +21,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE;
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export default function LoginScreen() {
     try {
       await signIn(nextEmail, nextPassword);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not sign in.');
+      setError(reason instanceof Error ? reason.message : t('Could not sign in.'));
     } finally {
       setBusy(false);
     }
@@ -42,18 +44,21 @@ export default function LoginScreen() {
 
   const form = (
     <View className="w-full max-w-md">
+      <View className="mb-6 flex-row justify-end">
+        <LanguageSwitch />
+      </View>
       <Text style={font.medium} className="text-xs uppercase tracking-widest text-moss">
-        Sign in
+        {t('Sign in')}
       </Text>
       <Text style={font.display} className="mt-2 text-4xl text-ink">
-        Open the desk
+        {t('Open the desk')}
       </Text>
       <Text style={font.sans} className="mb-6 mt-2 text-base leading-6 text-mute">
-        The same book on Windows, iPhone, and Android.
+        {t('The same book on Windows, iPhone, and Android.')}
       </Text>
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Text style={font.medium} className="mb-1.5 text-xs uppercase tracking-widest text-moss">
-        Email
+        {t('Email')}
       </Text>
       <TextInput
         value={email}
@@ -67,14 +72,14 @@ export default function LoginScreen() {
         style={font.sans}
       />
       <Text style={font.medium} className="mb-1.5 text-xs uppercase tracking-widest text-moss">
-        Password
+        {t('Password')}
       </Text>
       <TextInput
         value={password}
         onChangeText={setPassword}
         secureTextEntry
         autoCapitalize="none"
-        placeholder="Password"
+        placeholder={t('Password')}
         placeholderTextColor="#7a9495"
         className="mb-5 rounded-xl border border-line bg-card px-3 py-3 text-base text-ink"
         style={font.sans}
@@ -88,11 +93,11 @@ export default function LoginScreen() {
         style={{ opacity: busy ? 0.6 : 1 }}
       >
         <Text style={font.semibold} className="text-base text-card">
-          {busy ? 'Checking…' : 'Enter the desk'}
+          {busy ? t('Checking…') : t('Enter the desk')}
         </Text>
       </Pressable>
       <Text style={font.sans} className="mb-3 mt-8 text-xs uppercase tracking-widest text-mute">
-        Demo accounts
+        {t('Demo accounts')}
       </Text>
       {DEMOS.map((account) => (
         <Pressable
@@ -113,7 +118,7 @@ export default function LoginScreen() {
             <RolePill role={account.role} />
           </View>
           <Text style={font.sans} className="mt-1 text-sm text-mute">
-            {account.note}
+            {t(account.note)}
           </Text>
           <Text style={font.medium} className="mt-1 text-xs text-moss">
             {account.email} · {account.password}
@@ -121,7 +126,7 @@ export default function LoginScreen() {
         </Pressable>
       ))}
       <Text style={font.sans} className="mt-4 text-xs text-mute">
-        Server {serverUrl()}
+        {t('Server')} {serverUrl()}
       </Text>
     </View>
   );
@@ -131,13 +136,13 @@ export default function LoginScreen() {
       <View className={wide ? 'w-[46%] justify-between bg-pine px-12 py-16' : 'bg-pine px-6 py-8'} style={wide ? { paddingTop: Math.max(insets.top, 48) } : undefined}>
         <View>
           <Text style={font.medium} className="text-xs uppercase tracking-widest text-sand">
-            DoubleA Clinic
+            {t('Sekretariat')}
           </Text>
           <Text style={font.display} className={`text-card ${wide ? 'mt-4 text-6xl' : 'mt-2 text-4xl'}`}>
-            Halden
+            {t('Sekretariat')}
           </Text>
           <Text style={font.sans} className="mt-3 max-w-sm text-base leading-6 text-sand">
-            Today’s book, the month, and the sessions for each patient.
+            {t('Today’s book, the month, and the sessions for each patient.')}
           </Text>
         </View>
         {wide ? (
@@ -160,13 +165,14 @@ export default function LoginScreen() {
 }
 
 function RoleLine({ role, text }: { role: string; text: string }) {
+  const { t } = useI18n();
   return (
     <View className="mb-4">
       <Text style={font.semibold} className="text-base text-card">
-        {role}
+        {t(role)}
       </Text>
       <Text style={font.sans} className="text-sm text-sand">
-        {text}
+        {t(text)}
       </Text>
     </View>
   );

@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 
 import { Screen } from '../../components/Screen';
 import { PageTitle, font } from '../../components/ui';
+import { useI18n } from '../../lib/i18n';
 
 const SERVICES = [
   {

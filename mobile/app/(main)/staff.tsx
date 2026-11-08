@@ -6,7 +6,8 @@ import { Screen } from '../../components/Screen';
 import { Banner, Button, Chip, Field, PageTitle, RolePill, TherapyPill, confirmAction, font, therapySurface } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
-import { PATIENT_TYPES } from '../../lib/format';
+import { PATIENT_TYPES, latinRun } from '../../lib/format';
+import { translate, useI18n } from '../../lib/i18n';
 import { canManageStaff } from '../../lib/permissions';
 import type { Role, User } from '../../lib/types';
 
@@ -47,6 +48,7 @@ function AccountFields({
   passwordLabel: string;
   passwordPlaceholder?: string;
 }) {
+  const { t } = useI18n();
   return (
     <View>
       <Field label="Name" value={draft.name} onChangeText={(name) => onChange({ ...draft, name })} autoCapitalize="words" />
@@ -73,7 +75,7 @@ function AccountFields({
         keyboardType="phone-pad"
       />
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        Role
+        {t('Role')}
       </Text>
       <View className="flex-row flex-wrap">
         {ROLES.map((item) => (
@@ -81,7 +83,7 @@ function AccountFields({
         ))}
       </View>
       <Text style={font.medium} className="mb-2 mt-2 text-xs uppercase tracking-widest text-moss">
-        Therapy
+        {t('Therapy')}
       </Text>
       <View className="flex-row flex-wrap">
         <Chip label="None" active={draft.therapy == null} onPress={() => onChange({ ...draft, therapy: null })} />
@@ -95,6 +97,7 @@ function AccountFields({
 
 export default function StaffScreen() {
   const { user } = useAuth();
+  const { t, nameAlign } = useI18n();
   const { width, height } = useWindowDimensions();
   const [people, setPeople] = useState<User[]>([]);
   const [therapies, setTherapies] = useState<string[]>(PATIENT_TYPES);
@@ -170,7 +173,7 @@ export default function StaffScreen() {
         role: draft.role,
         therapyType: draft.therapy,
       });
-      setMessage(`Added ${draft.name.trim()} as ${draft.role}.`);
+      setMessage(t('Added {name} as {role}.', { name: draft.name.trim(), role: translate(draft.role) }));
       setAdding(false);
       setDraft(emptyDraft);
       await load();
@@ -200,7 +203,7 @@ export default function StaffScreen() {
         role: editDraft.role,
         therapyType: editDraft.therapy,
       });
-      setMessage(`Updated ${editDraft.name.trim()}.`);
+      setMessage(t('Updated {name}.', { name: editDraft.name.trim() }));
       cancelEdit();
       await load();
     } catch (reason) {
@@ -211,7 +214,7 @@ export default function StaffScreen() {
   }
 
   async function remove(person: User) {
-    const ok = await confirmAction('Remove this account?', `${person.name} will no longer be able to sign in.`);
+    const ok = await confirmAction('Remove this account?', translate('{name} will no longer be able to sign in.', { name: person.name }));
     if (!ok) return;
     try {
       await api.deleteUser(person.id);
@@ -233,12 +236,12 @@ export default function StaffScreen() {
   return (
     <Screen>
       <View className="flex-row items-start justify-between">
-        <View className="mr-4 flex-1">
+        <View className="me-4 flex-1">
           <PageTitle kicker="Staff" title="Desk accounts" detail="Each account has a name, email, password, and phone number." />
         </View>
         <Pressable accessibilityRole="button" onPress={beginAdd} className="mt-1 rounded-full bg-clay px-3 py-2">
           <Text style={font.medium} className="text-sm text-card">
-            Add account
+            {t('Add account')}
           </Text>
         </Pressable>
       </View>
@@ -256,7 +259,7 @@ export default function StaffScreen() {
                 passwordPlaceholder="Leave blank to keep it"
               />
               <View className="flex-row">
-                <View className="mr-3 flex-1">
+                <View className="me-3 flex-1">
                   <Button label={busy === 'save' ? 'Saving…' : 'Save'} disabled={busy != null} onPress={() => void saveEdit(person)} />
                 </View>
                 <View className="flex-1">
@@ -266,15 +269,15 @@ export default function StaffScreen() {
             </View>
           ) : (
             <View className="flex-row items-start">
-              <View className="mr-3 flex-1">
-                <Text style={font.semibold} className="text-base text-ink">
+              <View className="me-3 flex-1">
+                <Text style={[font.semibold, nameAlign]} className="text-base text-ink">
                   {person.name}
                 </Text>
-                <Text style={font.sans} className="mt-0.5 text-sm text-mute">
+                <Text style={[font.sans, nameAlign]} className="mt-0.5 text-sm text-mute">
                   {person.email}
                 </Text>
-                <Text style={font.sans} className="mt-0.5 text-sm text-mute">
-                  {person.phone || 'No phone'}
+                <Text style={[font.sans, nameAlign]} className="mt-0.5 text-sm text-mute">
+                  {person.phone ? latinRun(person.phone) : t('No phone')}
                 </Text>
               </View>
               <View className="items-end">
@@ -319,14 +322,14 @@ export default function StaffScreen() {
               style={{ width: Math.min(width - 32, 560), maxHeight: addMaxHeight, overflow: 'hidden' }}
             >
               <Text style={font.display} className="mb-3 text-2xl text-ink">
-                Add account
+                {t('Add account')}
               </Text>
               {formError ? <Banner tone="error">{formError}</Banner> : null}
               <ScrollView style={{ maxHeight: addMaxHeight - 160 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                 <AccountFields draft={draft} therapies={therapies} onChange={setDraft} passwordLabel="Password" />
               </ScrollView>
               <View className="mt-2 flex-row">
-                <View className="mr-3 flex-1">
+                <View className="me-3 flex-1">
                   <Button label={busy === 'create' ? 'Adding…' : 'Add account'} disabled={busy != null} onPress={() => void create()} />
                 </View>
                 <View className="flex-1">

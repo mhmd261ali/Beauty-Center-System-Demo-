@@ -2,6 +2,7 @@ import { Platform, Pressable, Text, View } from 'react-native';
 
 import { downloadDocument } from '../lib/files';
 import { formatStamp } from '../lib/format';
+import { useI18n } from '../lib/i18n';
 import type { DocumentRow } from '../lib/types';
 import { TherapyPill, font, therapySurface } from './ui';
 
@@ -42,10 +43,11 @@ export function DocumentCards({
   onRemove: (document: DocumentRow) => void;
   onError: (message: string) => void;
 }) {
+  const { t, nameAlign } = useI18n();
   if (documents.length === 0) {
     return (
-      <Text style={font.sans} className="text-base text-mute">
-        {empty}
+      <Text style={[font.sans, nameAlign]} className="text-base text-mute">
+        {t(empty)}
       </Text>
     );
   }
@@ -53,20 +55,19 @@ export function DocumentCards({
     <View>
       {documents.map((document) => (
         <View key={document.id} className="mb-3 flex-row items-center rounded-2xl border p-4" style={therapySurface(document.therapyType)}>
-          <View className="mr-3 flex-1">
+          <View className="me-3 flex-1">
             <View className="mb-1 flex-row items-start justify-between">
-              <Text style={font.semibold} className="mr-3 flex-1 text-lg text-ink">
+              <Text style={[font.semibold, nameAlign]} className="me-3 flex-1 text-lg text-ink">
                 {document.name}
               </Text>
               <TherapyPill therapy={document.therapyType} />
             </View>
-            <Text style={font.sans} className="mt-1 text-sm text-mute">
-              {[document.uploadedByName ? `Added by ${document.uploadedByName}` : null, formatStamp(document.createdAt)]
-                .filter(Boolean)
+            <Text style={[font.sans, nameAlign]} className="mt-1 text-sm text-mute">
+              {[document.uploadedByName ? t('Added by {name}', { name: document.uploadedByName }) : null, formatStamp(document.createdAt)]
                 .join(' · ')}
             </Text>
             {document.description ? (
-              <Text style={font.sans} className="mt-2 text-sm leading-5 text-ink">
+              <Text style={[font.sans, nameAlign]} className="mt-2 text-sm leading-5 text-ink">
                 {document.description}
               </Text>
             ) : null}

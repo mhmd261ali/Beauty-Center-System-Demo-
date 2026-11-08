@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { Redirect, useFocusEffect } from 'expo-router';
 
 import { Screen } from '../../components/Screen';
 import { Banner, Button, Chip, Field, PageTitle, font } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { formatClock } from '../../lib/format';
+import { translate, useI18n } from '../../lib/i18n';
 import { canManageSettings } from '../../lib/permissions';
 
 type Mode = 'before' | 'tomorrow';
@@ -23,22 +24,23 @@ function lead(hours: number) {
 
 function working(reminder: Reminder) {
   if (reminder.mode === 'tomorrow') {
-    return `One time for tomorrow, at ${formatClock(reminder.reminderTime)}`;
+    return translate('One time for tomorrow, at {time}', { time: formatClock(reminder.reminderTime) });
   }
-  return `Hours before the session, ${lead(reminder.reminderHours)}`;
+  return translate('Hours before the session, {lead}', { lead: translate(lead(reminder.reminderHours)) });
 }
 
 function summary(reminder: Reminder) {
   if (reminder.mode === 'tomorrow') {
-    return `At ${formatClock(reminder.reminderTime)}, every patient with a session tomorrow gets a WhatsApp message.`;
+    return translate('At {time}, every patient with a session tomorrow gets a WhatsApp message.', { time: formatClock(reminder.reminderTime) });
   }
-  return `A patient is reminded ${lead(reminder.reminderHours)} the session starts.`;
+  return translate('A patient is reminded {lead} the session starts.', { lead: translate(lead(reminder.reminderHours)) });
 }
 
 const EMPTY: Reminder = { mode: 'before', reminderHours: 24, reminderTime: '18:00' };
 
 export default function SettingsScreen() {
   const { user } = useAuth();
+  const { t, nameAlign } = useI18n();
   const allowed = user ? canManageSettings(user.role) : false;
   const [choices, setChoices] = useState<number[]>([1, 2, 6, 12, 24, 48]);
   const [times, setTimes] = useState<string[]>(['07:00', '08:00', '09:00', '12:00', '16:00', '17:00', '18:00', '19:00', '20:00']);
@@ -85,7 +87,7 @@ export default function SettingsScreen() {
       const data = await api.createTherapy(name);
       setTherapies(data.therapies);
       setTherapyName('');
-      setTherapyMessage(`Added ${data.therapy.name}`);
+      setTherapyMessage(t('Added {name}.', { name: data.therapy.name }));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not add that therapy.');
     } finally {
@@ -109,23 +111,17 @@ export default function SettingsScreen() {
     }
   }
 
-  if (!allowed) {
-    return (
-      <Screen>
-        <PageTitle kicker="Settings" title="Clinic settings" detail="Only an admin can change these." />
-      </Screen>
-    );
-  }
+  if (!allowed) return <Redirect href="/bookings" />;
 
   return (
     <Screen>
       <PageTitle kicker="Settings" title="Clinic settings" detail="Reminders, and the therapies a staff member can be assigned." />
-      <Text style={font.display} className="mb-4 text-2xl text-ink">
-        WhatsApp reminders
+      <Text style={[font.display, nameAlign]} className="mb-4 text-2xl text-ink">
+        {t('WhatsApp reminders')}
       </Text>
       <View className="mb-6 rounded-2xl border border-line bg-card px-4 py-4">
         <Text style={font.medium} className="text-xs uppercase tracking-widest text-moss">
-          Working now
+          {t('Working now')}
         </Text>
         <Text style={font.semibold} className="mt-2 text-lg text-ink">
           {working(saved)}
@@ -137,7 +133,7 @@ export default function SettingsScreen() {
       {message ? <Banner tone="ok">{message}</Banner> : null}
       {error ? <Banner tone="error">{error}</Banner> : null}
       <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-        How to send
+        {t('How to send')}
       </Text>
       <View className="flex-row flex-wrap">
         <Chip label="Hours before the session" active={draft.mode === 'before'} onPress={() => setDraft((current) => ({ ...current, mode: 'before' }))} />
@@ -146,7 +142,7 @@ export default function SettingsScreen() {
       {draft.mode === 'before' ? (
         <>
           <Text style={font.sans} className="mb-4 text-base leading-6 text-mute">
-            Choose how many hours before the session the WhatsApp message goes to that patient.
+            {t('Choose how many hours before the session the WhatsApp message goes to that patient.')}
           </Text>
           <View className="flex-row flex-wrap">
             {choices.map((hours) => (
@@ -162,7 +158,7 @@ export default function SettingsScreen() {
       ) : (
         <>
           <Text style={font.sans} className="mb-4 text-base leading-6 text-mute">
-            Choose the time of day. At that time, every patient who has a session tomorrow gets a WhatsApp message.
+            {t('Choose the time of day. At that time, every patient who has a session tomorrow gets a WhatsApp message.')}
           </Text>
           <View className="flex-row flex-wrap">
             {times.map((time) => (
@@ -178,21 +174,21 @@ export default function SettingsScreen() {
       )}
       <Button label={busy ? 'Saving…' : 'Save reminder'} disabled={busy || unchanged} onPress={() => void save()} />
       <Text style={font.display} className="mb-2 mt-10 text-2xl text-ink">
-        Therapies
+        {t('Therapies')}
       </Text>
       <Text style={font.sans} className="mb-4 text-base leading-6 text-mute">
-        Add a therapy here, then assign it when you add or edit a staff account.
+        {t('Add a therapy here, then assign it when you add or edit a staff account.')}
       </Text>
       {therapyMessage ? <Banner tone="ok">{therapyMessage}</Banner> : null}
       <View className="mb-4 rounded-2xl border border-line bg-card px-4 py-4">
         {therapies.length === 0 ? (
           <Text style={font.sans} className="text-base text-mute">
-            No therapies yet.
+            {t('No therapies yet.')}
           </Text>
         ) : (
           therapies.map((item) => (
             <Text key={item.id} style={font.medium} className="mb-2 text-base text-ink">
-              {item.name}
+              {t(item.name)}
             </Text>
           ))
         )}

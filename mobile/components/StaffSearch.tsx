@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { api } from '../lib/api';
+import { latinRun } from '../lib/format';
+import { useI18n } from '../lib/i18n';
 import type { User } from '../lib/types';
 import { Banner, Field, TherapyPill, font, therapySurface } from './ui';
 
@@ -16,6 +18,7 @@ export function StaffSearch({
   listHeight?: number;
   fillList?: boolean;
 }) {
+  const { nameAlign } = useI18n();
   const [query, setQuery] = useState('');
   const [people, setPeople] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -55,13 +58,13 @@ export function StaffSearch({
     return (
       <View className="mb-4 rounded-2xl border p-4" style={therapySurface(selected.therapyType)}>
         <View className="mb-1 flex-row items-start justify-between">
-          <Text style={font.semibold} className="mr-3 flex-1 text-lg text-ink">
+          <Text style={[font.semibold, nameAlign]} className="me-3 flex-1 text-lg text-ink">
             {selected.name}
           </Text>
           <TherapyPill therapy={selected.therapyType} />
         </View>
-        <Text style={font.sans} className="mt-1 text-sm text-mute">
-          {selected.phone || selected.email}
+        <Text style={[font.sans, nameAlign]} className="mt-1 text-sm text-mute">
+          {selected.phone || selected.email ? latinRun(selected.phone || selected.email) : null}
         </Text>
         <Pressable accessibilityRole="button" onPress={() => onSelect(null)} className="mt-3 self-start">
           <Text style={font.medium} className="text-sm text-moss">
@@ -83,12 +86,12 @@ export function StaffSearch({
           style={therapySurface(person.therapyType)}
         >
           <View className="flex-row items-start justify-between">
-            <View className="mr-3 flex-1">
-              <Text style={font.medium} className="text-base text-ink">
+            <View className="me-3 flex-1">
+              <Text style={[font.medium, nameAlign]} className="text-base text-ink">
                 {person.name}
               </Text>
-              <Text style={font.sans} className="mt-0.5 text-sm text-mute">
-                {person.phone || person.email}
+              <Text style={[font.sans, nameAlign]} className="mt-0.5 text-sm text-mute">
+                {person.phone || person.email ? latinRun(person.phone || person.email) : null}
               </Text>
             </View>
             <TherapyPill therapy={person.therapyType} />

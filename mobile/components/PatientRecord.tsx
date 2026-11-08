@@ -4,7 +4,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { addMinutes, ageFrom, DURATIONS, formatLong, PATIENT_TYPES, PAYER_TYPES, START_TIMES, hasSessionQuota, remainingSessions, todayISO } from '../lib/format';
+import { addMinutes, ageFrom, DURATIONS, formatLong, PATIENT_TYPES, PAYER_TYPES, START_TIMES, hasSessionQuota, latinRun, remainingSessions, todayISO } from '../lib/format';
+import { useI18n } from '../lib/i18n';
 import { canEdit } from '../lib/permissions';
 import type { Doctor, Patient, Reservation, VisitStatus } from '../lib/types';
 import { SessionCounts, SessionList } from './SessionList';
@@ -13,6 +14,7 @@ import { Banner, Button, Chip, Field, TherapyPill, font, therapySurface } from '
 export function PatientRecord({ patientId, showBack }: { patientId: number; showBack?: boolean }) {
   const { user } = useAuth();
   const router = useRouter();
+  const { t, nameAlign } = useI18n();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [visits, setVisits] = useState<Reservation[]>([]);
   const [notes, setNotes] = useState('');
@@ -213,36 +215,38 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
       {showBack ? (
         <Pressable accessibilityRole="button" onPress={() => router.back()} className="mb-4 self-start">
           <Text style={font.medium} className="text-sm text-moss">
-            Back to patients
+            {t('Back to patients')}
           </Text>
         </Pressable>
       ) : null}
       {loading ? (
         <Text style={font.sans} className="text-mute">
-          Opening the record…
+          {t('Opening the record…')}
         </Text>
       ) : null}
       {error ? <Banner tone="error">{error}</Banner> : null}
       {patient ? (
         <View>
           <View className="flex-row items-start justify-between">
-            <View className="mr-3 flex-1">
+            <View className="me-3 flex-1">
               <Text style={font.medium} className="text-xs uppercase tracking-widest text-moss">
-                Patient
+                {t('Patient')}
               </Text>
-              <Text style={font.display} className="mt-1 text-4xl text-ink">
+              <Text style={[font.display, nameAlign]} className="mt-1 text-4xl text-ink">
                 {patient.fullName}
               </Text>
             </View>
             <TherapyPill therapy={therapy} />
           </View>
           <Text style={font.sans} className="mt-2 text-base leading-6 text-mute">
-            {[age != null ? `${age} years` : null, patient.gender, patient.dateOfBirth ? formatLong(patient.dateOfBirth) : null]
+            {[age != null ? (age === 1 ? t('1 year') : t('{n} years', { n: age })) : null, patient.gender ? t(patient.gender) : null, patient.dateOfBirth ? formatLong(patient.dateOfBirth) : null]
               .filter(Boolean)
-              .join(' · ') || 'No date of birth on file'}
+              .join(' · ') || t('No date of birth on file')}
           </Text>
           <Text style={font.sans} className="mt-1 text-base text-mute">
-            {[patient.phone, patient.email].filter(Boolean).join(' · ') || 'No phone or email'}
+            {[patient.phone, patient.email].filter(Boolean).join(' · ')
+              ? latinRun([patient.phone, patient.email].filter(Boolean).join(' · '))
+              : t('No phone or email')}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -250,19 +254,19 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
             className="mt-4 self-start rounded-full bg-pine px-4 py-2"
           >
             <Text style={font.medium} className="text-sm text-card">
-              See documents
+              {t('See documents')}
             </Text>
           </Pressable>
 
           <View className="mt-5 rounded-2xl border p-4" style={therapySurface(therapy)}>
             <View className="mb-2 flex-row items-center justify-between">
               <Text style={font.medium} className="text-xs uppercase tracking-widest text-moss">
-                Therapy
+                {t('Therapy')}
               </Text>
               {editingCare ? null : (
                 <Pressable accessibilityRole="button" accessibilityLabel="Edit therapy, doctor, and type" onPress={beginCareEdit}>
                   <Text style={font.medium} className="text-sm text-moss">
-                    Edit
+                    {t('Edit')}
                   </Text>
                 </Pressable>
               )}
@@ -275,27 +279,27 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
               </View>
             ) : (
               <Text style={font.sans} className="text-base text-ink">
-                {therapy || 'No therapy yet.'}
+                {therapy ? t(therapy) : t('No therapy yet.')}
               </Text>
             )}
             <Text style={font.medium} className="mb-2 mt-4 text-xs uppercase tracking-widest text-moss">
-              Doctor
+              {t('Doctor')}
             </Text>
             {editingCare ? (
               <View className="flex-row flex-wrap">
                 {doctors
                   .filter((doctor) => doctor.therapyType === therapyChoice)
                   .map((doctor) => (
-                    <Chip key={doctor.id} label={doctor.name} active={doctorChoice === doctor.id} onPress={() => setDoctorChoice(doctor.id)} />
+                    <Chip key={doctor.id} label={doctor.name} raw active={doctorChoice === doctor.id} onPress={() => setDoctorChoice(doctor.id)} />
                   ))}
               </View>
             ) : (
-              <Text style={font.sans} className="text-base text-ink">
-                {doctorName || 'No doctor yet.'}
+              <Text style={[font.sans, nameAlign]} className="text-base text-ink">
+                {doctorName || t('No doctor yet.')}
               </Text>
             )}
             <Text style={font.medium} className="mb-2 mt-4 text-xs uppercase tracking-widest text-moss">
-              Patient type
+              {t('Patient type')}
             </Text>
             {editingCare ? (
               <View>
@@ -317,7 +321,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
                 ) : null}
                 <View className="mt-3 flex-row">
                   {careChanged ? (
-                    <View className="mr-3 flex-1">
+                    <View className="me-3 flex-1">
                       <Button label="Save" disabled={!therapyChoice || !typeChoice} onPress={() => void saveCare()} />
                     </View>
                   ) : null}
@@ -329,19 +333,19 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
             ) : (
               <View>
                 <Text style={font.sans} className="text-base text-ink">
-                  {patientType}
+                  {t(patientType)}
                 </Text>
                 {hasSessionQuota(patientType) ? (
                   <>
                     <Text style={font.medium} className="mb-2 mt-4 text-xs uppercase tracking-widest text-moss">
-                      Remaining sessions
+                      {t('Remaining sessions')}
                     </Text>
                     <Text style={font.sans} className="text-base text-ink">
                       {remaining == null
-                        ? 'No session number yet.'
+                        ? t('No session number yet.')
                         : remaining === 1
-                          ? '1 session'
-                          : `${remaining} sessions`}
+                          ? t('1 session')
+                          : t('{n} sessions', { n: remaining })}
                     </Text>
                   </>
                 ) : null}
@@ -351,7 +355,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
 
           <View className="mt-5 rounded-2xl border border-line bg-card p-4">
             <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-              Case notes
+              {t('Case notes')}
             </Text>
             {editable ? (
               <>
@@ -365,14 +369,14 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
               </>
             ) : (
               <Text style={font.sans} className="text-base leading-6 text-ink">
-                {patient.notes || 'No chart notes yet.'}
+                {patient.notes || t('No chart notes yet.')}
               </Text>
             )}
           </View>
 
           <View className="mt-6 flex-row items-center justify-between">
             <Text style={font.display} className="text-2xl text-ink">
-              Sessions
+              {t('Sessions')}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -380,7 +384,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
               className="rounded-full border border-clay bg-card px-3 py-2"
             >
               <Text style={font.medium} className="text-sm text-moss">
-                {adding ? 'Close' : 'Add a session'}
+                {adding ? t('Close') : t('Add a session')}
               </Text>
             </Pressable>
           </View>
@@ -389,7 +393,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
             <View className="mt-4 rounded-2xl border border-line bg-card p-4">
               <Field label="Date" value={date} onChangeText={setDate} autoCapitalize="none" placeholder="YYYY-MM-DD" />
               <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-                Start
+                {t('Start')}
               </Text>
               <View className="flex-row flex-wrap">
                 {START_TIMES.filter((_, index) => index % 2 === 0).map((time) => (
@@ -397,7 +401,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
                 ))}
               </View>
               <Text style={font.medium} className="mb-2 mt-2 text-xs uppercase tracking-widest text-moss">
-                Length
+                {t('Length')}
               </Text>
               <View className="flex-row flex-wrap">
                 {DURATIONS.map((minutes) => (
@@ -407,7 +411,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
               {therapy ? (
                 <>
                   <Text style={font.medium} className="mb-2 text-xs uppercase tracking-widest text-moss">
-                    Doctor
+                    {t('Doctor')}
                   </Text>
                   <View className="flex-row flex-wrap">
                     {doctors
@@ -416,6 +420,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
                         <Chip
                           key={doctor.id}
                           label={doctor.name}
+                          raw
                           active={sessionDoctorId === doctor.id}
                           onPress={() => setSessionDoctorId(doctor.id)}
                         />
@@ -446,7 +451,7 @@ export function PatientRecord({ patientId, showBack }: { patientId: number; show
               className="mt-1 self-start"
             >
               <Text style={font.medium} className="text-sm text-moss">
-                See more
+                {t('See more')}
               </Text>
             </Pressable>
           ) : null}

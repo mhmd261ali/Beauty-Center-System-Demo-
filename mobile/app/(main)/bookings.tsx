@@ -7,6 +7,7 @@ import { Timeline } from '../../components/Timeline';
 import { VisitCard } from '../../components/VisitCard';
 import { Banner, Chip, DateField, PageTitle, THERAPY_FALLBACK, THERAPY_TONE, font } from '../../components/ui';
 import { api } from '../../lib/api';
+import { useI18n } from '../../lib/i18n';
 import { addDays, formatLong, todayISO } from '../../lib/format';
 import type { Reservation } from '../../lib/types';
 
@@ -14,6 +15,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function BookingsScreen() {
   const router = useRouter();
+  const { t, back, forward } = useI18n();
   const today = todayISO();
   const [date, setDate] = useState(today);
   const [visits, setVisits] = useState<Reservation[]>([]);
@@ -74,7 +76,7 @@ export default function BookingsScreen() {
       <PageTitle
         kicker="Bookings"
         title={formatLong(date)}
-        detail={loading ? 'Opening the book…' : `${visible.length} on the timeline${cancelled ? ` · ${cancelled} cancelled` : ''}`}
+        detail={loading ? t('Opening the book…') : cancelled ? t('{count} on the timeline · {cancelled} cancelled', { count: visible.length, cancelled }) : t('{count} on the timeline', { count: visible.length })}
       />
       {error ? <Banner tone="error">{error}</Banner> : null}
       <View className="mb-4 flex-row flex-wrap">
@@ -83,46 +85,46 @@ export default function BookingsScreen() {
         <Chip label="Tomorrow" active={date === tomorrow} onPress={() => goTo(tomorrow)} />
       </View>
       <View className="mb-5 flex-row items-end">
-        <View className="mr-3 flex-1">
+        <View className="me-3 flex-1">
           <DateField label="Choose a day" value={date} onChange={goTo} />
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Previous day"
+          accessibilityLabel={t('Previous day')}
           onPress={() => goTo(addDays(date, -1))}
-          className="mb-4 mr-2 h-12 w-12 items-center justify-center rounded-xl border border-line bg-card"
+          className="mb-4 me-2 h-12 w-12 items-center justify-center rounded-xl border border-line bg-card"
         >
           <Text style={font.semibold} className="text-base text-ink">
-            ←
+            {back}
           </Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Next day"
+          accessibilityLabel={t('Next day')}
           onPress={() => goTo(addDays(date, 1))}
           className="mb-4 h-12 w-12 items-center justify-center rounded-xl border border-line bg-card"
         >
           <Text style={font.semibold} className="text-base text-ink">
-            →
+            {forward}
           </Text>
         </Pressable>
       </View>
       <View className="mb-5 flex-row flex-wrap">
-        <Pressable accessibilityRole="button" onPress={() => setHideCancelled((value) => !value)} className="mb-2 mr-3 rounded-full border border-line bg-card px-3 py-2">
+        <Pressable accessibilityRole="button" onPress={() => setHideCancelled((value) => !value)} className="mb-2 me-3 rounded-full border border-line bg-card px-3 py-2">
           <Text style={font.medium} className="text-sm text-ink">
-            {hideCancelled ? 'Show cancelled' : 'Hide cancelled'}
+            {hideCancelled ? t('Show cancelled') : t('Hide cancelled')}
           </Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={() => router.push('/reserve')} className="mb-2 rounded-full bg-clay px-3 py-2">
           <Text style={font.medium} className="text-sm text-card">
-            Book a visit
+            {t('Book a visit')}
           </Text>
         </Pressable>
       </View>
       <Timeline key={date} visits={visible} selectedId={selected?.id ?? null} isToday={isToday} onSelect={select} />
       {visible.length === 0 && !loading ? (
         <Text style={font.sans} className="mt-3 text-base text-mute">
-          This day's book is clear.
+          {t("This day's book is clear.")}
         </Text>
       ) : null}
       <View className="mt-4 flex-row flex-wrap">
@@ -136,7 +138,7 @@ export default function BookingsScreen() {
           <VisitCard visit={selected} onChanged={changed} />
         ) : (
           <Text style={font.sans} className="text-base leading-6 text-mute">
-            Select a visit on the timeline to see the patient, the reason, and the note.
+            {t('Select a visit on the timeline to see the patient, the reason, and the note.')}
           </Text>
         )}
       </View>
@@ -145,11 +147,12 @@ export default function BookingsScreen() {
 }
 
 function Legend({ swatch, mark, label }: { swatch: string; mark: string; label: string }) {
+  const { t } = useI18n();
   return (
-    <View className="mb-2 mr-4 flex-row items-center">
-      <View style={{ backgroundColor: swatch, borderColor: mark, borderWidth: 2 }} className="mr-2 h-3.5 w-3.5 rounded-full" />
+    <View className="mb-2 me-4 flex-row items-center">
+      <View style={{ backgroundColor: swatch, borderColor: mark, borderWidth: 2 }} className="me-2 h-3.5 w-3.5 rounded-full" />
       <Text style={font.sans} className="text-sm text-mute">
-        {label}
+        {t(label)}
       </Text>
     </View>
   );
